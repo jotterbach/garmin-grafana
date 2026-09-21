@@ -131,7 +131,7 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "dotenv", specifier = "==0.9.9" },
-    { name = "garmin-fit-sdk", specifier = ">=21.214.0" },
+    { name = "garmin-fit-sdk", specifier = "==21.214.0" },
     { name = "garminconnect", specifier = "==0.3.7" },
     { name = "influxdb", specifier = "==5.3.2" },
     { name = "influxdb3-python", specifier = "==0.12.0" },

@@ -20,7 +20,6 @@ from datetime import datetime, timezone
 from fit_decoder import FitDecodeError, decode_fit
 from collections import namedtuple
 from io import BytesIO
-from unittest import mock
 from enum import Enum
 
 import zipfile
