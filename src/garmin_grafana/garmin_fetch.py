@@ -460,31 +460,19 @@ def get_intraday_stress(date_str):
     stress_list = garmin_obj.get_stress_data(date_str).get('stressValuesArray') or []
     for entry in stress_list:
         if entry[1] or entry[1] == 0:
-            points_list.append({
-                    "measurement":  "StressIntraday",
-                    "time": datetime.fromtimestamp(entry[0]/1000, tz=pytz.timezone("UTC")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {
-                        "stressLevel": entry[1]
-                    }
-                })
+            timestamp = datetime.fromtimestamp(entry[0]/1000, tz=pytz.timezone("UTC"))
+            points_list.extend(build_timestamped_point(
+                "StressIntraday", timestamp, {"stressLevel": entry[1]},
+                device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+            ))
     bb_list = garmin_obj.get_stress_data(date_str).get('bodyBatteryValuesArray') or []
     for entry in bb_list:
         if entry[2] or entry[2] == 0:
-            points_list.append({
-                    "measurement":  "BodyBatteryIntraday",
-                    "time": datetime.fromtimestamp(entry[0]/1000, tz=pytz.timezone("UTC")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {
-                        "BodyBatteryLevel": entry[2]
-                    }
-                })
+            timestamp = datetime.fromtimestamp(entry[0]/1000, tz=pytz.timezone("UTC"))
+            points_list.extend(build_timestamped_point(
+                "BodyBatteryIntraday", timestamp, {"BodyBatteryLevel": entry[2]},
+                device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+            ))
     if points_list:
         logging.info(f"Success : Fetching intraday stress and Body Battery values for date {date_str}")
     return points_list
