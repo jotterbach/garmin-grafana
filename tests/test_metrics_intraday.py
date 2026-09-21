@@ -242,3 +242,34 @@ def test_body_composition_exact_point_shape(garmin_fetch_module):
             },
         },
     ]
+
+
+def test_lifestyle_data_exact_point_shape(garmin_fetch_module):
+    """Midnight shape (build_daily_summary_point), looped per behavior
+    log entry -- unlike every other function in this phase, which uses
+    the arbitrary-timestamp shape."""
+    points = garmin_fetch_module.get_lifestyle_data(DATE_STR)
+    assert points == [
+        {
+            "measurement": "LifestyleJournal",
+            "time": "2026-01-15T00:00:00+00:00",
+            "tags": {
+                "Device": "TestDevice",
+                "Database_Name": "SmokeTestDB",
+                "behavior": "Alcohol",
+                "category": "SUBSTANCE",
+            },
+            "fields": {"status": 0, "value": 0.0},
+        },
+        {
+            "measurement": "LifestyleJournal",
+            "time": "2026-01-15T00:00:00+00:00",
+            "tags": {
+                "Device": "TestDevice",
+                "Database_Name": "SmokeTestDB",
+                "behavior": "Caffeine",
+                "category": "SUBSTANCE",
+            },
+            "fields": {"status": 1, "value": 95.0},
+        },
+    ]
