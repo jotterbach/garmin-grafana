@@ -1,10 +1,10 @@
 {
   "daily_stats": {
     "wellnessStartTimeGmt": "2026-01-15T06:00:00.0",
-    "activeKilocalories": 650,
-    "bmrKilocalories": 1650,
+    "activeKilocalories": 650.0,
+    "bmrKilocalories": 1650.0,
     "totalSteps": 9800,
-    "totalDistanceMeters": 7200.0,
+    "totalDistanceMeters": 7200,
     "highlyActiveSeconds": 1800,
     "activeSeconds": 5400,
     "sedentarySeconds": 43200,
@@ -13,8 +13,8 @@
     "vigorousIntensityMinutes": 20,
     "floorsAscendedInMeters": 24.4,
     "floorsDescendedInMeters": 24.4,
-    "floorsAscended": 8,
-    "floorsDescended": 8,
+    "floorsAscended": 8.0,
+    "floorsDescended": 8.0,
     "minHeartRate": 48,
     "maxHeartRate": 172,
     "restingHeartRate": 52,
@@ -30,28 +30,33 @@
   "heart_rates": {
     "heartRateValues": [
       [1768460400000, 58],
-      [1768460700000, 61]
+      [1768460700000, 61],
+      [1768461000000, 0]
     ]
   },
   "stress": {
     "stressValuesArray": [
       [1768460400000, 22],
-      [1768460700000, 28]
+      [1768460700000, 28],
+      [1768461000000, 0]
     ],
     "bodyBatteryValuesArray": [
       [1768460400000, "MEASURED", 74, 3.0],
-      [1768460700000, "MEASURED", 72, 3.0]
+      [1768460700000, "MEASURED", 72, 3.0],
+      [1768461000000, "MEASURED", 0, 3.0]
     ]
   },
   "respiration": {
     "respirationValuesArray": [
       [1768460400000, 14.0],
-      [1768460700000, 14.5]
+      [1768460700000, 14.5],
+      [1768461000000, 0.0]
     ]
   },
   "hrv": {
     "hrvReadings": [
-      {"readingTimeGMT": "2026-01-15T06:00:00.0", "hrvValue": 45}
+      {"readingTimeGMT": "2026-01-15T06:00:00.0", "hrvValue": 45},
+      {"readingTimeGMT": "2026-01-15T06:05:00.0", "hrvValue": 0}
     ]
   },
   "fitness_age": {
