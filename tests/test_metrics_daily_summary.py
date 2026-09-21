@@ -131,3 +131,25 @@ def test_hydration_exact_point_shape(garmin_fetch_module):
             },
         }
     ]
+
+
+def test_daily_fetch_write_respects_custom_fetch_selection_subset(
+    garmin_fetch_module, monkeypatch
+):
+    """
+    Narrower than test_smoke_pipeline.py's test_daily_fetch_write_end_to_end
+    (which always uses the full default FETCH_SELECTION) -- proves the
+    dispatch is genuinely data-driven by selecting only two metrics and
+    confirming *only* those measurements get written, not the full set.
+    This is the baseline the upcoming dispatch-table refactor of
+    daily_fetch_write's if-chain must keep passing unchanged.
+    """
+    monkeypatch.setattr(garmin_fetch_module, "FETCH_SELECTION", "hydration,hill_score")
+    garmin_fetch_module.daily_fetch_write(DATE_STR)
+
+    storage = garmin_fetch_module.INFLUXDB_STORAGE
+    assert storage.query('SELECT * FROM "Hydration"')
+    assert storage.query('SELECT * FROM "HillScore"')
+    assert storage.query('SELECT * FROM "FitnessAge"') == []
+    assert storage.query('SELECT * FROM "DailyStats"') == []
+    assert storage.query('SELECT * FROM "RacePredictions"') == []
