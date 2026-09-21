@@ -1372,23 +1372,20 @@ def get_vo2_max(date_str):
         return []
 
 def get_endurance_score(date_str):
-    points_list = []
     endurance_dict = garmin_obj.get_endurance_score(date_str)
-    if endurance_dict:
-        if endurance_dict.get("overallScore"):
-            points_list.append({
-                "measurement":  "EnduranceScore",
-                "time": pytz.timezone("UTC").localize(datetime.strptime(date_str,"%Y-%m-%d")).isoformat(), # Use GMT 00:00 is timestamp is not available
-                "tags": {
-                    "Device": GARMIN_DEVICENAME,
-                    "Database_Name": INFLUXDB_DATABASE
-                },
-                "fields": {
-                    "EnduranceScore": endurance_dict.get("overallScore")
-                    }
-            })
-            logging.info(f"Success : Fetching Endurance Score for date {date_str}")
-    return points_list
+    if not endurance_dict or not endurance_dict.get("overallScore"):
+        # Truthy check, not an is-None check -- a value of 0 must still
+        # count as "no data". See tests/test_metrics_daily_summary.py's
+        # test_endurance_score_zero_value_is_treated_as_no_data.
+        return []
+    fields = {"EnduranceScore": endurance_dict.get("overallScore")}
+    points = build_daily_summary_point(
+        "EnduranceScore", date_str, fields,
+        device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+    )
+    if points:
+        logging.info(f"Success : Fetching Endurance Score for date {date_str}")
+    return points
 
 def get_blood_pressure(date_str):
     points_list = []
