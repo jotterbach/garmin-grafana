@@ -229,3 +229,32 @@ def test_strength_exercise_set_exact_point_shape(garmin_fetch_module):
             },
         },
     ]
+
+
+def test_strength_hr_zones_exact_point_shape(garmin_fetch_module):
+    """5 zones from the shared hr_zones fixture, each at
+    activity_start_time + zoneNumber milliseconds -- an unusual but
+    deliberate small-offset scheme so each zone gets a distinct,
+    closely-clustered timestamp."""
+    points = garmin_fetch_module.get_strength_training_data(STRENGTH_ACTIVITY_ID_DICT)
+    hr_zone_points = [p for p in points if p["measurement"] == "StrengthHRZones"]
+    assert hr_zone_points == [
+        {
+            "measurement": "StrengthHRZones",
+            "time": f"2026-01-15T18:00:00.00{zn}000+00:00",
+            "tags": {
+                "Device": "TestDevice",
+                "Database_Name": "SmokeTestDB",
+                "ActivityID": 9876543211,
+                "ActivitySelector": "20260115T180000UTC-strength_training",
+            },
+            "fields": {
+                "Activity_ID": 9876543211,
+                "ActivityName": "Evening Strength Session",
+                "ZoneNumber": zn,
+                "SecsInZone": None,
+                "ZoneLowBoundary": boundary,
+            },
+        }
+        for zn, boundary in [(1, 95), (2, 130), (3, 150), (4, 165), (5, 178)]
+    ]
