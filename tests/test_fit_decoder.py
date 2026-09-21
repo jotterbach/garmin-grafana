@@ -24,31 +24,20 @@ re-decoding per test function made this suite unreasonably slow.
 """
 
 import datetime
-import os
-from pathlib import Path
 
 import pytest
 
+from conftest import FIT_CORPUS_DIR, real_fit_paths
 from fit_decoder import FitDecodeError, decode_fit
-
-FIT_TEST_CORPUS_DIR = Path(
-    os.environ.get("FIT_TEST_CORPUS_DIR", "/ext/garmin-grafana/fit_filestore")
-)
-
-
-def _corpus_paths():
-    if not FIT_TEST_CORPUS_DIR.is_dir():
-        return []
-    return sorted(FIT_TEST_CORPUS_DIR.glob("*.fit"))
 
 
 @pytest.fixture(scope="module")
 def decoded_corpus():
     """{path: decoded messages dict} for every real FIT file in the corpus."""
-    paths = _corpus_paths()
+    paths = real_fit_paths()
     if not paths:
         pytest.skip(
-            f"no real FIT files found under {FIT_TEST_CORPUS_DIR} -- "
+            f"no real FIT files found under {FIT_CORPUS_DIR} -- "
             "local-only characterization, not a CI gate"
         )
     result = {}

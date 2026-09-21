@@ -45,6 +45,21 @@ SRC_PACKAGE_DIR = REPO_ROOT / "src" / "garmin_grafana"
 
 sys.path.insert(0, str(SRC_PACKAGE_DIR))
 
+# Real FIT files pulled from production via KEEP_FIT_FILES (see issue #26 /
+# the garmin_grafana_phase7_fit_plan memory) -- never committed (real
+# personal health data), so this directory won't exist in CI. Shared by
+# every test module that characterizes real-FIT-file parsing; each such
+# test skips cleanly when the corpus is absent.
+FIT_CORPUS_DIR = Path(
+    os.environ.get("FIT_TEST_CORPUS_DIR", "/ext/garmin-grafana/fit_filestore")
+)
+
+
+def real_fit_paths():
+    if not FIT_CORPUS_DIR.is_dir():
+        return []
+    return sorted(FIT_CORPUS_DIR.glob("*.fit"))
+
 TEST_INFLUXDB_HOST = os.environ.get("TEST_INFLUXDB_HOST", "127.0.0.1")
 TEST_INFLUXDB_PORT = int(os.environ.get("TEST_INFLUXDB_PORT", "18086"))
 TEST_INFLUXDB_DATABASE = "SmokeTestDB"
