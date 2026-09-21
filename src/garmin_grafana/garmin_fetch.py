@@ -328,17 +328,11 @@ def get_sleep_data(date_str):
     if sleep_respiration_intraday:
         for entry in sleep_respiration_intraday:
             if entry.get("respirationValue"):
-                points_list.append({
-                    "measurement":  "SleepIntraday",
-                    "time": datetime.fromtimestamp(entry["startTimeGMT"]/1000, tz=pytz.timezone("UTC")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {
-                        "respirationValue": entry.get("respirationValue")
-                    }
-                })
+                timestamp = datetime.fromtimestamp(entry["startTimeGMT"]/1000, tz=pytz.timezone("UTC"))
+                points_list.extend(build_timestamped_point(
+                    "SleepIntraday", timestamp, {"respirationValue": entry.get("respirationValue")},
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                ))
     sleep_heart_rate_intraday = all_sleep_data.get("sleepHeartRate")
     if sleep_heart_rate_intraday:
         for entry in sleep_heart_rate_intraday:
