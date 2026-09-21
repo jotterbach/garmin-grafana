@@ -104,7 +104,9 @@ garmin-grafana/
 ├── .gitignore             # Git ignore rules
 ├── Dockerfile             # Docker configuration
 ├── README.md              # Project overview and instructions
-├── compose-example.yml    # Docker Compose example
+├── compose.yml            # Docker Compose deployment config (secrets via .env, gitignored)
+├── compose-example.yml    # Docker Compose example (upstream published image)
+├── .env.example           # Template for the .env file compose.yml reads secrets from
 ├── easy-install.sh        # Installation script
 ├── pyproject.toml         # Project metadata and dependencies
 └── uv.lock                # Locked dependencies
