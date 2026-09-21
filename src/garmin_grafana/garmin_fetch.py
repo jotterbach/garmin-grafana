@@ -15,7 +15,7 @@ from garminconnect import (
 from config import Config
 from influx_storage import InfluxStorage
 from garmin_client import garmin_login
-from metric_points import build_daily_summary_point
+from metric_points import build_daily_summary_point, build_timestamped_point
 garmin_obj = None
 banner_text = """
 
@@ -1275,17 +1275,19 @@ def get_training_readiness(date_str):
                     "stressHistoryFactorPercent": tr_dict.get("stressHistoryFactorPercent"),
                     "hrvFactorPercent": tr_dict.get("hrvFactorPercent"),
                 }
+            # Guard checked (and short-circuited) before any timestamp
+            # parsing is attempted, same as before -- avoids parsing a
+            # malformed timestamp for an entry whose fields are all None
+            # anyway, which the old inline version also never attempted.
             if (not all(value is None for value in data_fields.values())) and tr_dict.get('timestamp'):
-                points_list.append({
-                    "measurement":  "TrainingReadiness",
-                    "time": pytz.timezone("UTC").localize(datetime.strptime(tr_dict['timestamp'],"%Y-%m-%dT%H:%M:%S.%f")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": data_fields
-                })
-                logging.info(f"Success : Fetching Training Readiness for date {date_str}")
+                timestamp = pytz.timezone("UTC").localize(datetime.strptime(tr_dict['timestamp'], "%Y-%m-%dT%H:%M:%S.%f"))
+                points = build_timestamped_point(
+                    "TrainingReadiness", timestamp, data_fields,
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                )
+                points_list.extend(points)
+                if points:
+                    logging.info(f"Success : Fetching Training Readiness for date {date_str}")
     return points_list
 
 # Contribution from PR #17 by @arturgoms 
