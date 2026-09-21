@@ -1,14 +1,17 @@
 """
 Shared pytest fixtures for the garmin-grafana smoke-test suite.
 
-Critical ordering note: garmin_fetch.py opens a real InfluxDB connection and
-writes a demo point as a *side effect of being imported* (see
-src/garmin_grafana/garmin_fetch.py, the module-level try/except right after
-the ENV var parsing block). That means the test database must exist, and the
-right env vars must be set, *before* anything imports garmin_fetch --
-including test collection itself. This file runs before any test module in
-this directory is collected, so all of that setup happens here at module
-level, not inside a fixture function.
+Critical ordering note: even though garmin_fetch.py no longer connects to
+InfluxDB as an import-time side effect (see influx_storage.py --
+connectivity is now verified explicitly, either by __main__ in production or
+by the garmin_fetch_module fixture below in tests), the right env vars still
+need to be set *before* anything imports garmin_fetch or config -- including
+test collection itself, since Config.from_env() runs at garmin_fetch's
+import time regardless. This file runs before any test module in this
+directory is collected, so all of that setup happens here at module level,
+not inside a fixture function. The test database is also created here
+upfront, before collection, so it's ready the moment any test's explicit
+check_connection() call needs it.
 
 Import mode: garmin_fetch.py is run in production as a raw script
 (Dockerfile: `python garmin_grafana/garmin_fetch.py`), which puts its own
@@ -148,16 +151,22 @@ def fake_garmin():
 @pytest.fixture
 def garmin_fetch_module():
     """
-    Imports garmin_fetch (triggering its import-time InfluxDB connection
-    against the isolated test database set up above) and injects fake_garmin
-    as garmin_fetch.garmin_obj, matching the existing project convention in
-    fit_activity_importer.py of assigning garmin_fetch.garmin_obj directly.
+    Imports garmin_fetch and injects fake_garmin as garmin_fetch.garmin_obj,
+    matching the existing project convention in fit_activity_importer.py of
+    assigning garmin_fetch.garmin_obj directly.
 
     Bare import (not `from garmin_grafana import garmin_fetch`) -- see this
     file's module docstring for why that matters here.
+
+    Since garmin_fetch.py no longer verifies InfluxDB connectivity at import
+    time (that moved to an explicit INFLUXDB_STORAGE.check_connection() call
+    in __main__ -- see influx_storage.py), this fixture calls it explicitly
+    here instead, preserving the same guarantee tests relied on before: if
+    this fixture succeeds, the test database is definitely reachable.
     """
     import garmin_fetch
 
+    garmin_fetch.INFLUXDB_STORAGE.check_connection()
     garmin_fetch.garmin_obj = FakeGarmin()
     return garmin_fetch
 

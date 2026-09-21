@@ -18,7 +18,7 @@ def test_daily_fetch_write_end_to_end(garmin_fetch_module):
     # FakeGarmin backing every call.
     garmin_fetch_module.daily_fetch_write(DATE_STR)
 
-    client = garmin_fetch_module.influxdbclient
+    storage = garmin_fetch_module.INFLUXDB_STORAGE
     for measurement in (
         "DailyStats",
         "SleepSummary",
@@ -34,7 +34,7 @@ def test_daily_fetch_write_end_to_end(garmin_fetch_module):
         "BodyComposition",
         "LifestyleJournal",
     ):
-        result = list(client.query(f'SELECT * FROM "{measurement}"').get_points())
+        result = storage.query(f'SELECT * FROM "{measurement}"')
         assert result, f"expected at least one point written to {measurement}"
 
 
@@ -48,10 +48,6 @@ def test_write_points_to_influxdb_round_trip(garmin_fetch_module):
 
     garmin_fetch_module.write_points_to_influxdb([point])
 
-    result = list(
-        garmin_fetch_module.influxdbclient.query(
-            'SELECT * FROM "SmokeTestRoundTrip"'
-        ).get_points()
-    )
+    result = garmin_fetch_module.INFLUXDB_STORAGE.query('SELECT * FROM "SmokeTestRoundTrip"')
     assert len(result) == 1
     assert result[0]["value"] == 42
