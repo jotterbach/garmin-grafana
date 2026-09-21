@@ -337,17 +337,11 @@ def get_sleep_data(date_str):
     if sleep_heart_rate_intraday:
         for entry in sleep_heart_rate_intraday:
             if entry.get("value"):
-                points_list.append({
-                    "measurement":  "SleepIntraday",
-                    "time": datetime.fromtimestamp(entry["startGMT"]/1000, tz=pytz.timezone("UTC")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {
-                        "heartRate": entry.get("value")
-                    }
-                })
+                timestamp = datetime.fromtimestamp(entry["startGMT"]/1000, tz=pytz.timezone("UTC"))
+                points_list.extend(build_timestamped_point(
+                    "SleepIntraday", timestamp, {"heartRate": entry.get("value")},
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                ))
     sleep_stress_intraday = all_sleep_data.get("sleepStress")
     if sleep_stress_intraday:
         for entry in sleep_stress_intraday:
