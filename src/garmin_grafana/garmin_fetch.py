@@ -4,9 +4,8 @@ import re
 import requests, time, pytz, logging, os, sys, dotenv, io, zipfile
 from fitparse import FitFile, FitParseError
 from datetime import datetime, timedelta
-from influxdb import InfluxDBClient
 from influxdb.exceptions import InfluxDBClientError
-from influxdb_client_3 import InfluxDBClient3, InfluxDBError
+from influxdb_client_3 import InfluxDBError
 import xml.etree.ElementTree as ET
 from garminconnect import (
     Garmin,
@@ -15,6 +14,7 @@ from garminconnect import (
     GarminConnectTooManyRequestsError,
 )
 from config import Config
+from influx_storage import InfluxStorage
 garmin_obj = None
 banner_text = """
 
@@ -98,43 +98,12 @@ logging.basicConfig(
 )
 
 # %%
-try:
-    if INFLUXDB_ENDPOINT_IS_HTTP:
-        if INFLUXDB_VERSION == '1':
-            influxdbclient = InfluxDBClient(host=INFLUXDB_HOST, port=INFLUXDB_PORT, username=INFLUXDB_USERNAME, password=INFLUXDB_PASSWORD)
-            influxdbclient.switch_database(INFLUXDB_DATABASE)
-        else:
-            influxdbclient = InfluxDBClient3(
-            host=f"http://{INFLUXDB_HOST}:{INFLUXDB_PORT}",
-            token=INFLUXDB_V3_ACCESS_TOKEN,
-            org=INFLUXDB_ORG,
-            database=INFLUXDB_DATABASE
-            )
-    else:
-        if INFLUXDB_VERSION == '1':
-            influxdbclient = InfluxDBClient(host=INFLUXDB_HOST, port=INFLUXDB_PORT, username=INFLUXDB_USERNAME, password=INFLUXDB_PASSWORD, ssl=True, verify_ssl=True)
-            influxdbclient.switch_database(INFLUXDB_DATABASE)
-        else:
-            influxdbclient = InfluxDBClient3(
-            host=f"https://{INFLUXDB_HOST}:{INFLUXDB_PORT}",
-            token=INFLUXDB_V3_ACCESS_TOKEN,
-            org=INFLUXDB_ORG,
-            database=INFLUXDB_DATABASE
-            )
-    demo_point = {
-    'measurement': 'DemoPoint',
-    'time': (datetime.now(pytz.utc) - timedelta(minutes=1)).isoformat(timespec='seconds'),
-    'tags': {'DemoTag': 'DemoTagValue'},
-    'fields': {'DemoField': 0}
-     }
-    # The following code block tests the connection by writing/overwriting a demo point. raises error and aborts if connection fails. 
-    if INFLUXDB_VERSION == '1':
-        influxdbclient.write_points([demo_point])
-    else:
-        influxdbclient.write(record=[demo_point])
-except (InfluxDBClientError, InfluxDBError) as err:
-    logging.error("Unable to connect with influxdb database! Aborted")
-    raise InfluxDBClientError("InfluxDB connection failed:" + str(err))
+# Client construction does no I/O (see influx_storage.py's module docstring),
+# so this is safe at import time. Connectivity itself is only verified by an
+# explicit INFLUXDB_STORAGE.check_connection() call in __main__ below -- not
+# as an import-time side effect, which is what previously made this module
+# impossible to import without a live, reachable InfluxDB.
+INFLUXDB_STORAGE = InfluxStorage(CONFIG)
 
 # %%
 def iter_days(start_date: str, end_date: str):
@@ -204,18 +173,12 @@ def _is_http_status_error(err, status_code):
 
 # %%
 def write_points_to_influxdb(points):
-    write_chunk_size = 20000
     try:
         if len(points) != 0:
             if TAG_MEASUREMENTS_WITH_USER_EMAIL:
                 for item in points:
                     item['tags'].update({'User_ID': garmin_obj.display_name or 'Unknown'})
-            # Write in chunks - Issue reported for large activities data containing >20000 points - Error 413 : payload too large
-            for i in range(0, len(points), write_chunk_size):
-                if INFLUXDB_VERSION == '1':
-                    influxdbclient.write_points(points[i:i + write_chunk_size])
-                else:
-                    influxdbclient.write(record=points[i:i + write_chunk_size])
+            INFLUXDB_STORAGE.write_points(points)
             logging.info("Success : updated influxDB database with new points")
     except (InfluxDBClientError, InfluxDBError) as err:
         logging.error("Write failed : Unable to connect with database! " + str(err))
@@ -776,15 +739,8 @@ def purge_existing_strength_exercise_sets(activity_id):
         )
         return True
 
-    if not hasattr(influxdbclient, 'delete_series'):
-        logging.warning(
-            f"InfluxDB client does not support purging StrengthExerciseSet series for activity {activity_id}. "
-            "Applying the default refresh behavior; edited exercises may produce duplicated rows."
-        )
-        return True
-
     try:
-        influxdbclient.delete_series(
+        INFLUXDB_STORAGE.delete_series(
             measurement='StrengthExerciseSet',
             tags={'ActivityID': str(activity_id)},
         )
@@ -1778,6 +1734,16 @@ def fetch_write_bulk(start_date_str, end_date_str):
 
 
 if __name__ == "__main__":
+    try:
+        INFLUXDB_STORAGE.check_connection()
+    except (InfluxDBClientError, InfluxDBError):
+        # check_connection() already wraps the underlying error into a
+        # descriptive InfluxDBClientError -- re-raise it as-is rather than
+        # wrapping it again, which previously produced a doubled message
+        # ("InfluxDB connection failed:InfluxDB connection failed:...").
+        logging.error("Unable to connect with influxdb database! Aborted")
+        raise
+
     garmin_obj = garmin_login()
 
     # %%
@@ -1787,10 +1753,11 @@ if __name__ == "__main__":
         exit(0)
     else:
         try:
+            last_sync_rows = INFLUXDB_STORAGE.query("SELECT * FROM HeartRateIntraday ORDER BY time DESC LIMIT 1")
             if INFLUXDB_VERSION == "1":
-                last_influxdb_sync_time_UTC = pytz.utc.localize(datetime.strptime(list(influxdbclient.query(f"SELECT * FROM HeartRateIntraday ORDER BY time DESC LIMIT 1").get_points())[0]['time'],"%Y-%m-%dT%H:%M:%SZ"))
+                last_influxdb_sync_time_UTC = pytz.utc.localize(datetime.strptime(last_sync_rows[0]['time'], "%Y-%m-%dT%H:%M:%SZ"))
             else:
-                last_influxdb_sync_time_UTC = pytz.utc.localize(influxdbclient.query(query="SELECT * FROM HeartRateIntraday ORDER BY time DESC LIMIT 1", language="influxql").to_pylist()[0]['time'])
+                last_influxdb_sync_time_UTC = pytz.utc.localize(last_sync_rows[0]['time'])
         except Exception as err:
             logging.error(err)
             logging.warning("No previously synced data found in local InfluxDB database, defaulting to 7 day initial fetching. Use specific start date ENV variable to bulk update past data")

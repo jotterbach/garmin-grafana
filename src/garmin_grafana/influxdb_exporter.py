@@ -1,11 +1,11 @@
-import os
 import argparse
 import zipfile
 import io
-from influxdb import InfluxDBClient
-from influxdb_client_3 import InfluxDBClient3, InfluxDBError
 import pandas as pd
 from datetime import datetime, timedelta, timezone
+
+from config import Config
+from influx_storage import InfluxStorage
 
 
 parser = argparse.ArgumentParser(description="Export InfluxDB measurements to individual CSVs in a ZIP archive")
@@ -40,48 +40,14 @@ timestamp_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 zip_filename = f"/tmp/GarminStats_Export_{timestamp_str}_{time_label}.zip"
 
 
-INFLUXDB_VERSION = os.getenv("INFLUXDB_VERSION",'1') # Your influxdb database version (accepted values are '1' or '3')
-assert INFLUXDB_VERSION in ['1','3'], "Only InfluxDB version 1 or 3 is allowed - please ensure to set this value to either 1 or 3"
-INFLUXDB_HOST = os.getenv("INFLUXDB_HOST", "your.influxdb.hostname")
-INFLUXDB_PORT = int(os.getenv("INFLUXDB_PORT", 8086))
-INFLUXDB_USERNAME = os.getenv("INFLUXDB_USERNAME", "influxdb_username")
-INFLUXDB_PASSWORD = os.getenv("INFLUXDB_PASSWORD", "influxdb_access_password")
-INFLUXDB_DATABASE = os.getenv("INFLUXDB_DATABASE", "GarminStats")
-INFLUXDB_V3_ACCESS_TOKEN = os.getenv("INFLUXDB_V3_ACCESS_TOKEN",'') # InfluxDB V3 Access token, required only for InfluxDB V3
-INFLUXDB_ENDPOINT_IS_HTTP = False if os.getenv("INFLUXDB_ENDPOINT_IS_HTTP") in ['False','false','FALSE','f','F','no','No','NO','0'] else True # optional
-
-
-if INFLUXDB_ENDPOINT_IS_HTTP:
-    if INFLUXDB_VERSION == '1':
-        influxdbclient = InfluxDBClient(host=INFLUXDB_HOST, port=INFLUXDB_PORT, username=INFLUXDB_USERNAME, password=INFLUXDB_PASSWORD)
-        influxdbclient.switch_database(INFLUXDB_DATABASE)
-    else:
-        influxdbclient = InfluxDBClient3(
-        host=f"http://{INFLUXDB_HOST}:{INFLUXDB_PORT}",
-        token=INFLUXDB_V3_ACCESS_TOKEN,
-        database=INFLUXDB_DATABASE
-        )
-else:
-    if INFLUXDB_VERSION == '1':
-        influxdbclient = InfluxDBClient(host=INFLUXDB_HOST, port=INFLUXDB_PORT, username=INFLUXDB_USERNAME, password=INFLUXDB_PASSWORD, ssl=True, verify_ssl=True)
-        influxdbclient.switch_database(INFLUXDB_DATABASE)
-    else:
-        influxdbclient = InfluxDBClient3(
-        host=f"https://{INFLUXDB_HOST}:{INFLUXDB_PORT}",
-        token=INFLUXDB_V3_ACCESS_TOKEN,
-        database=INFLUXDB_DATABASE
-        )
+CONFIG = Config.from_env()
+INFLUXDB_STORAGE = InfluxStorage(CONFIG)
 
 # --- Measurement exclusion list ---
 excluded_measurements = {"%", "DemoPoint", "DeviceSync"}
 
 # --- Fetch all measurements ---
-measurements_query = "SHOW MEASUREMENTS"
-if INFLUXDB_VERSION == "1":
-    measurements_result = influxdbclient.query(measurements_query)
-else:
-    measurements_result = influxdbclient.query(measurements_query, language="influxql")
-measurements = [m["name"] for m in measurements_result.get_points()]
+measurements = [m["name"] for m in INFLUXDB_STORAGE.query("SHOW MEASUREMENTS")]
 
 print(f"Found {len(measurements)} measurements. Skipping: {excluded_measurements}")
 
@@ -97,12 +63,7 @@ with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
         query = f'SELECT * FROM "{measurement}" WHERE {time_clause}'
 
         try:
-            
-            if INFLUXDB_VERSION == "1":
-                result = influxdbclient.query(query)
-            else:
-                result = influxdbclient.query(query, language="influxql")
-            points = list(result.get_points())
+            points = INFLUXDB_STORAGE.query(query)
 
             if not points:
                 print(" -- ⚠️ No data within given period.")
