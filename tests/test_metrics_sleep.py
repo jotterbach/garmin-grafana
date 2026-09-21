@@ -72,3 +72,17 @@ def test_sleep_movement_exact_point_shape(garmin_fetch_module):
             "fields": {"SleepMovementActivityLevel": -1.0, "SleepMovementActivitySeconds": 300},
         },
     ]
+
+
+def test_sleep_restlessness_exact_point_shape(garmin_fetch_module):
+    """Truthy-only guard: a 0 value is dropped."""
+    points = garmin_fetch_module.get_sleep_data(DATE_STR)
+    restless_points = [p for p in points if "sleepRestlessValue" in p["fields"]]
+    assert restless_points == [
+        {
+            "measurement": "SleepIntraday",
+            "time": "2026-01-15T02:45:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"sleepRestlessValue": 3},
+        },
+    ]
