@@ -1211,15 +1211,11 @@ def get_lactate_threshold(date_str):
             for lt_dict in lt_list_all:
                 value = lt_dict.get("value")
                 if value is not None:
-                    points_list.append({
-                        "measurement": "LactateThreshold",
-                        "time": datetime.fromtimestamp(datetime.strptime(date_str, "%Y-%m-%d").timestamp(), tz=pytz.timezone("UTC")).isoformat(),
-                        "tags": {
-                            "Device": GARMIN_DEVICENAME,
-                            "Database_Name": INFLUXDB_DATABASE
-                        },
-                        "fields": {f"{label}": value}
-                    })
+                    timestamp = datetime.fromtimestamp(datetime.strptime(date_str, "%Y-%m-%d").timestamp(), tz=pytz.timezone("UTC"))
+                    points_list.extend(build_timestamped_point(
+                        "LactateThreshold", timestamp, {f"{label}": value},
+                        device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                    ))
                     logging.info(f"Success : Fetching {label} for date {date_str}")
 
     return points_list
