@@ -364,17 +364,11 @@ def get_sleep_data(date_str):
     if sleep_hrv_intraday:
         for entry in sleep_hrv_intraday:
             if entry.get("value"):
-                points_list.append({
-                    "measurement":  "SleepIntraday",
-                    "time": datetime.fromtimestamp(entry["startGMT"]/1000, tz=pytz.timezone("UTC")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {
-                        "hrvData": entry.get("value")
-                    }
-                })
+                timestamp = datetime.fromtimestamp(entry["startGMT"]/1000, tz=pytz.timezone("UTC"))
+                points_list.extend(build_timestamped_point(
+                    "SleepIntraday", timestamp, {"hrvData": entry.get("value")},
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                ))
     if points_list:
         logging.info(f"Success : Fetching intraday sleep metrics for date {date_str}")
     return points_list
