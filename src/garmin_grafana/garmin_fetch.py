@@ -240,14 +240,8 @@ def get_sleep_data(date_str):
     all_sleep_data = garmin_obj.get_sleep_data(date_str)
     sleep_json = all_sleep_data.get("dailySleepDTO", None)
     if sleep_json["sleepEndTimestampGMT"]:
-        points_list.append({
-        "measurement":  "SleepSummary",
-        "time": datetime.fromtimestamp(sleep_json["sleepEndTimestampGMT"]/1000, tz=pytz.timezone("UTC")).isoformat(),
-        "tags": {
-            "Device": GARMIN_DEVICENAME,
-            "Database_Name": INFLUXDB_DATABASE
-            },
-        "fields": {
+        timestamp = datetime.fromtimestamp(sleep_json["sleepEndTimestampGMT"]/1000, tz=pytz.timezone("UTC"))
+        fields = {
             "sleepTimeSeconds": sleep_json.get("sleepTimeSeconds"),
             "deepSleepSeconds": sleep_json.get("deepSleepSeconds"),
             "lightSleepSeconds": sleep_json.get("lightSleepSeconds"),
@@ -269,7 +263,10 @@ def get_sleep_data(date_str):
             "avgSkinTempDeviationC": all_sleep_data.get("avgSkinTempDeviationC"),
             "avgSkinTempDeviationF": all_sleep_data.get("avgSkinTempDeviationF")
             }
-        })
+        points_list.extend(build_timestamped_point(
+            "SleepSummary", timestamp, fields,
+            device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+        ))
     sleep_movement_intraday = all_sleep_data.get("sleepMovement")
     if sleep_movement_intraday:
         for entry in sleep_movement_intraday:
