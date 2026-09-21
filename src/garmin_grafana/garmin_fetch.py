@@ -139,14 +139,8 @@ def get_daily_stats(date_str):
     points_list = []
     stats_json = garmin_obj.get_stats(date_str)
     if stats_json['wellnessStartTimeGmt'] and datetime.strptime(date_str, "%Y-%m-%d") < datetime.today():
-        points_list.append({
-            "measurement":  "DailyStats",
-            "time": pytz.timezone("UTC").localize(datetime.strptime(stats_json['wellnessStartTimeGmt'], "%Y-%m-%dT%H:%M:%S.%f")).isoformat(),
-            "tags": {
-                "Device": GARMIN_DEVICENAME,
-                "Database_Name": INFLUXDB_DATABASE
-            },
-            "fields": {
+        timestamp = pytz.timezone("UTC").localize(datetime.strptime(stats_json['wellnessStartTimeGmt'], "%Y-%m-%dT%H:%M:%S.%f"))
+        fields = {
                 "activeKilocalories": stats_json.get('activeKilocalories'),
                 "bmrKilocalories": stats_json.get('bmrKilocalories'),
 
@@ -201,7 +195,10 @@ def get_daily_stats(date_str):
                 "averageSpo2": stats_json.get("averageSpo2"),
                 "lowestSpo2": stats_json.get("lowestSpo2"),
             }
-        })
+        points_list = build_timestamped_point(
+            "DailyStats", timestamp, fields,
+            device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+        )
         if points_list:
             logging.info(f"Success : Fetching daily metrics for date {date_str}")
         return points_list
@@ -430,17 +427,11 @@ def get_intraday_hr(date_str):
     hr_list = garmin_obj.get_heart_rates(date_str).get("heartRateValues") or []
     for entry in hr_list:
         if entry[1]:
-            points_list.append({
-                    "measurement":  "HeartRateIntraday",
-                    "time": datetime.fromtimestamp(entry[0]/1000, tz=pytz.timezone("UTC")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {
-                        "HeartRate": entry[1]
-                    }
-                })
+            timestamp = datetime.fromtimestamp(entry[0]/1000, tz=pytz.timezone("UTC"))
+            points_list.extend(build_timestamped_point(
+                "HeartRateIntraday", timestamp, {"HeartRate": entry[1]},
+                device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+            ))
     if points_list:
         logging.info(f"Success : Fetching intraday Heart Rate for date {date_str}")
     return points_list
@@ -451,17 +442,11 @@ def get_intraday_steps(date_str):
     steps_list = garmin_obj.get_steps_data(date_str)
     for entry in steps_list:
         if entry["steps"] or entry["steps"] == 0:
-            points_list.append({
-                    "measurement":  "StepsIntraday",
-                    "time": pytz.timezone("UTC").localize(datetime.strptime(entry['startGMT'], "%Y-%m-%dT%H:%M:%S.%f")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {
-                        "StepsCount": entry["steps"]
-                    }
-                })
+            timestamp = pytz.timezone("UTC").localize(datetime.strptime(entry['startGMT'], "%Y-%m-%dT%H:%M:%S.%f"))
+            points_list.extend(build_timestamped_point(
+                "StepsIntraday", timestamp, {"StepsCount": entry["steps"]},
+                device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+            ))
     if points_list:
         logging.info(f"Success : Fetching intraday steps for date {date_str}")
     return points_list
@@ -472,31 +457,19 @@ def get_intraday_stress(date_str):
     stress_list = garmin_obj.get_stress_data(date_str).get('stressValuesArray') or []
     for entry in stress_list:
         if entry[1] or entry[1] == 0:
-            points_list.append({
-                    "measurement":  "StressIntraday",
-                    "time": datetime.fromtimestamp(entry[0]/1000, tz=pytz.timezone("UTC")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {
-                        "stressLevel": entry[1]
-                    }
-                })
+            timestamp = datetime.fromtimestamp(entry[0]/1000, tz=pytz.timezone("UTC"))
+            points_list.extend(build_timestamped_point(
+                "StressIntraday", timestamp, {"stressLevel": entry[1]},
+                device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+            ))
     bb_list = garmin_obj.get_stress_data(date_str).get('bodyBatteryValuesArray') or []
     for entry in bb_list:
         if entry[2] or entry[2] == 0:
-            points_list.append({
-                    "measurement":  "BodyBatteryIntraday",
-                    "time": datetime.fromtimestamp(entry[0]/1000, tz=pytz.timezone("UTC")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {
-                        "BodyBatteryLevel": entry[2]
-                    }
-                })
+            timestamp = datetime.fromtimestamp(entry[0]/1000, tz=pytz.timezone("UTC"))
+            points_list.extend(build_timestamped_point(
+                "BodyBatteryIntraday", timestamp, {"BodyBatteryLevel": entry[2]},
+                device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+            ))
     if points_list:
         logging.info(f"Success : Fetching intraday stress and Body Battery values for date {date_str}")
     return points_list
@@ -507,17 +480,11 @@ def get_intraday_br(date_str):
     br_list = garmin_obj.get_respiration_data(date_str).get('respirationValuesArray') or []
     for entry in br_list:
         if entry[1]:
-            points_list.append({
-                    "measurement":  "BreathingRateIntraday",
-                    "time": datetime.fromtimestamp(entry[0]/1000, tz=pytz.timezone("UTC")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {
-                        "BreathingRate": entry[1]
-                    }
-                })
+            timestamp = datetime.fromtimestamp(entry[0]/1000, tz=pytz.timezone("UTC"))
+            points_list.extend(build_timestamped_point(
+                "BreathingRateIntraday", timestamp, {"BreathingRate": entry[1]},
+                device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+            ))
     if points_list:
         logging.info(f"Success : Fetching intraday Breathing Rate for date {date_str}")
     return points_list
@@ -528,17 +495,11 @@ def get_intraday_hrv(date_str):
     hrv_list = (garmin_obj.get_hrv_data(date_str) or {}).get('hrvReadings') or []
     for entry in hrv_list:
         if entry.get('hrvValue'):
-            points_list.append({
-                    "measurement":  "HRV_Intraday",
-                    "time": pytz.timezone("UTC").localize(datetime.strptime(entry['readingTimeGMT'],"%Y-%m-%dT%H:%M:%S.%f")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {
-                        "hrvValue": entry.get('hrvValue')
-                    }
-                })
+            timestamp = pytz.timezone("UTC").localize(datetime.strptime(entry['readingTimeGMT'], "%Y-%m-%dT%H:%M:%S.%f"))
+            points_list.extend(build_timestamped_point(
+                "HRV_Intraday", timestamp, {"hrvValue": entry.get('hrvValue')},
+                device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+            ))
     if points_list:
         logging.info(f"Success : Fetching intraday HRV for date {date_str}")
     return points_list
@@ -562,17 +523,16 @@ def get_body_composition(date_str):
                     # "metabolicAge": datetime.fromtimestamp(int(weight_dict.get("metabolicAge")/1000), tz=pytz.timezone("UTC")).isoformat() if weight_dict.get("metabolicAge") else None
                 }
             if not all(value is None for value in data_fields.values()):
-                points_list.append({
-                    "measurement":  "BodyComposition",
-                    "time": datetime.fromtimestamp((weight_dict['timestampGMT']/1000) , tz=pytz.timezone("UTC")).isoformat() if weight_dict['timestampGMT'] else datetime.strptime(date_str, "%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(), # Use GMT 00:00 is timestamp is not available (issue #15)
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE,
-                        "Frequency" : "Intraday",
-                        "SourceType" : weight_dict.get('sourceType', "Unknown")
-                    },
-                    "fields": data_fields
-                })
+                timestamp = (
+                    datetime.fromtimestamp((weight_dict['timestampGMT']/1000), tz=pytz.timezone("UTC"))
+                    if weight_dict['timestampGMT']
+                    else datetime.strptime(date_str, "%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC)
+                )  # Use GMT 00:00 is timestamp is not available (issue #15)
+                points_list.extend(build_timestamped_point(
+                    "BodyComposition", timestamp, data_fields,
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                    extra_tags={"Frequency": "Intraday", "SourceType": weight_dict.get('sourceType', "Unknown")},
+                ))
         logging.info(f"Success : Fetching intraday Body Composition (Weight, BMI etc) for date {date_str}")
     return points_list
 
@@ -1481,17 +1441,11 @@ def get_lifestyle_data(date_str):
                 "value": value
             }
 
-            points_list.append({
-                "measurement": "LifestyleJournal",
-                "time": pytz.timezone("UTC").localize(datetime.strptime(date_str, "%Y-%m-%d")).isoformat(),
-                "tags": {
-                    "Device": GARMIN_DEVICENAME,
-                    "Database_Name": INFLUXDB_DATABASE,
-                    "behavior": behavior_name,
-                    "category": category
-                },
-                "fields": fields
-            })
+            points_list.extend(build_daily_summary_point(
+                "LifestyleJournal", date_str, fields,
+                device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                extra_tags={"behavior": behavior_name, "category": category},
+            ))
             
         logging.info(f"Success : Fetching Lifestyle Journaling data for date {date_str}")
 

@@ -15,14 +15,31 @@
           "bmi": 22.4,
           "bodyFat": 15.2,
           "bodyWater": 58.1,
-          "boneMass": 3200.0,
-          "muscleMass": 34500.0,
+          "boneMass": 3200,
+          "muscleMass": 34500,
           "physiqueRating": 5,
           "visceralFat": 4,
           "metabolicAge": 28,
           "sourceType": "MANUAL",
           "timestampGMT": 1768521600000,
           "weightDelta": -200.0
+        },
+        {
+          "samplePk": 1234567890124,
+          "date": 1768521600000,
+          "calendarDate": "2026-01-15",
+          "weight": 72400.0,
+          "bmi": 22.3,
+          "bodyFat": null,
+          "bodyWater": null,
+          "boneMass": null,
+          "muscleMass": null,
+          "physiqueRating": null,
+          "visceralFat": null,
+          "metabolicAge": null,
+          "sourceType": "INDEX_SCALE",
+          "timestampGMT": null,
+          "weightDelta": null
         }
       ]
     }
