@@ -1514,6 +1514,49 @@ def get_lifestyle_data(date_str):
 
 
 # %%
+def _fetch_and_write_activity(date_str):
+    activity_summary_points_list, activity_with_gps_id_dict, strength_activity_id_dict = get_activity_summary(date_str)
+    write_points_to_influxdb(activity_summary_points_list)
+    write_points_to_influxdb(fetch_activity_GPS(activity_with_gps_id_dict))
+    if strength_activity_id_dict:
+        write_points_to_influxdb(get_strength_training_data(strength_activity_id_dict))
+
+
+# Dispatch table replacing what used to be a 45-line hardcoded if-chain in
+# daily_fetch_write. Every entry is a uniform `date_str -> None` callable
+# that does its own write_points_to_influxdb call(s) -- 'activity' needs
+# three separate writes (summary/GPS/strength), not the "one function
+# returns points, caller writes them" shape everything else has, so it gets
+# its own named handler above instead of being forced into a lambda.
+#
+# Order matters here and is preserved exactly from the original if-chain
+# (dict iteration order = insertion order in Python 3.7+): 'activity' sits
+# between 'hydration' and 'solar_intensity', not after everything else.
+DAILY_METRIC_HANDLERS = {
+    'daily_avg': lambda date_str: write_points_to_influxdb(get_daily_stats(date_str)),
+    'sleep': lambda date_str: write_points_to_influxdb(get_sleep_data(date_str)),
+    'steps': lambda date_str: write_points_to_influxdb(get_intraday_steps(date_str)),
+    'heartrate': lambda date_str: write_points_to_influxdb(get_intraday_hr(date_str)),
+    'stress': lambda date_str: write_points_to_influxdb(get_intraday_stress(date_str)),
+    'breathing': lambda date_str: write_points_to_influxdb(get_intraday_br(date_str)),
+    'hrv': lambda date_str: write_points_to_influxdb(get_intraday_hrv(date_str)),
+    'fitness_age': lambda date_str: write_points_to_influxdb(get_fitness_age(date_str)),
+    'vo2': lambda date_str: write_points_to_influxdb(get_vo2_max(date_str)),
+    'race_prediction': lambda date_str: write_points_to_influxdb(get_race_predictions(date_str)),
+    'body_composition': lambda date_str: write_points_to_influxdb(get_body_composition(date_str)),
+    'lactate_threshold': lambda date_str: write_points_to_influxdb(get_lactate_threshold(date_str)),
+    'training_status': lambda date_str: write_points_to_influxdb(get_training_status(date_str)),
+    'training_readiness': lambda date_str: write_points_to_influxdb(get_training_readiness(date_str)),
+    'hill_score': lambda date_str: write_points_to_influxdb(get_hillscore(date_str)),
+    'endurance_score': lambda date_str: write_points_to_influxdb(get_endurance_score(date_str)),
+    'blood_pressure': lambda date_str: write_points_to_influxdb(get_blood_pressure(date_str)),
+    'hydration': lambda date_str: write_points_to_influxdb(get_hydration(date_str)),
+    'activity': _fetch_and_write_activity,
+    'solar_intensity': lambda date_str: write_points_to_influxdb(get_solar_intensity(date_str)),
+    'lifestyle': lambda date_str: write_points_to_influxdb(get_lifestyle_data(date_str)),
+}
+
+
 def daily_fetch_write(date_str):
     if REQUEST_INTRADAY_DATA_REFRESH and (datetime.strptime(date_str, "%Y-%m-%d") <= (datetime.today() - timedelta(days=IGNORE_INTRADAY_DATA_REFRESH_DAYS))):
         data_refresh_response = garmin_obj.connectapi(f"wellness-service/wellness/epoch/request/{date_str}", method="POST").get("status", "Unknown")
@@ -1536,52 +1579,9 @@ def daily_fetch_write(date_str):
         else:
             logging.info(f"Refresh response is unknown!")
             time.sleep(5)
-    if 'daily_avg' in FETCH_SELECTION:
-        write_points_to_influxdb(get_daily_stats(date_str))
-    if 'sleep' in FETCH_SELECTION:
-        write_points_to_influxdb(get_sleep_data(date_str))
-    if 'steps' in FETCH_SELECTION:
-        write_points_to_influxdb(get_intraday_steps(date_str))
-    if 'heartrate' in FETCH_SELECTION:
-        write_points_to_influxdb(get_intraday_hr(date_str))
-    if 'stress' in FETCH_SELECTION:
-        write_points_to_influxdb(get_intraday_stress(date_str))
-    if 'breathing' in FETCH_SELECTION:
-        write_points_to_influxdb(get_intraday_br(date_str))
-    if 'hrv' in FETCH_SELECTION:
-        write_points_to_influxdb(get_intraday_hrv(date_str))
-    if 'fitness_age' in FETCH_SELECTION:
-        write_points_to_influxdb(get_fitness_age(date_str))
-    if 'vo2' in FETCH_SELECTION:
-        write_points_to_influxdb(get_vo2_max(date_str))
-    if 'race_prediction' in FETCH_SELECTION:
-        write_points_to_influxdb(get_race_predictions(date_str))
-    if 'body_composition' in FETCH_SELECTION:
-        write_points_to_influxdb(get_body_composition(date_str))
-    if 'lactate_threshold' in FETCH_SELECTION:
-        write_points_to_influxdb(get_lactate_threshold(date_str))
-    if 'training_status' in FETCH_SELECTION:
-        write_points_to_influxdb(get_training_status(date_str))
-    if 'training_readiness' in FETCH_SELECTION:
-        write_points_to_influxdb(get_training_readiness(date_str))
-    if 'hill_score' in FETCH_SELECTION:
-        write_points_to_influxdb(get_hillscore(date_str))
-    if 'endurance_score' in FETCH_SELECTION:
-        write_points_to_influxdb(get_endurance_score(date_str))
-    if 'blood_pressure' in FETCH_SELECTION:
-        write_points_to_influxdb(get_blood_pressure(date_str))
-    if 'hydration' in FETCH_SELECTION:
-        write_points_to_influxdb(get_hydration(date_str))
-    if 'activity' in FETCH_SELECTION:
-        activity_summary_points_list, activity_with_gps_id_dict, strength_activity_id_dict = get_activity_summary(date_str)
-        write_points_to_influxdb(activity_summary_points_list)
-        write_points_to_influxdb(fetch_activity_GPS(activity_with_gps_id_dict))
-        if strength_activity_id_dict:
-            write_points_to_influxdb(get_strength_training_data(strength_activity_id_dict))
-    if 'solar_intensity' in FETCH_SELECTION:
-        write_points_to_influxdb(get_solar_intensity(date_str))
-    if 'lifestyle' in FETCH_SELECTION:
-        write_points_to_influxdb(get_lifestyle_data(date_str))
+    for key, handler in DAILY_METRIC_HANDLERS.items():
+        if key in FETCH_SELECTION:
+            handler(date_str)
 
 
 # %%
