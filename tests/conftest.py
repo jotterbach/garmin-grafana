@@ -56,6 +56,7 @@ os.environ["INFLUXDB_USERNAME"] = "root"
 os.environ["INFLUXDB_PASSWORD"] = "root"
 os.environ["INFLUXDB_ENDPOINT_IS_HTTP"] = "True"
 os.environ.setdefault("GARMIN_DEVICENAME", "TestDevice")
+os.environ.setdefault("GARMIN_DEVICEID", "1234567890")
 os.environ.setdefault("TOKEN_DIR", "/tmp/garmin-grafana-test-tokens-unused")
 
 # Make sure the test database exists before garmin_fetch's module-level
@@ -150,6 +151,21 @@ class FakeGarmin:
 
     def get_hydration_data(self, date_str):
         return self._daily["hydration"]
+
+    def get_training_readiness(self, date_str):
+        return self._daily["training_readiness"]
+
+    def get_blood_pressure(self, start_date, end_date):
+        return self._daily["blood_pressure"]
+
+    def get_training_status(self, date_str):
+        return self._daily["training_status"]
+
+    def get_device_solar_data(self, device_id, date_str):
+        return self._daily["solar_intensity"]
+
+    def connectapi(self, endpoint, method="GET"):
+        return [self._daily["lactate_threshold_value"]]
 
 
 @pytest.fixture

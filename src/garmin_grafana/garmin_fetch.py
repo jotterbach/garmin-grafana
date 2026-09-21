@@ -15,7 +15,7 @@ from garminconnect import (
 from config import Config
 from influx_storage import InfluxStorage
 from garmin_client import garmin_login
-from metric_points import build_daily_summary_point
+from metric_points import build_daily_summary_point, build_timestamped_point
 garmin_obj = None
 banner_text = """
 
@@ -1211,15 +1211,11 @@ def get_lactate_threshold(date_str):
             for lt_dict in lt_list_all:
                 value = lt_dict.get("value")
                 if value is not None:
-                    points_list.append({
-                        "measurement": "LactateThreshold",
-                        "time": datetime.fromtimestamp(datetime.strptime(date_str, "%Y-%m-%d").timestamp(), tz=pytz.timezone("UTC")).isoformat(),
-                        "tags": {
-                            "Device": GARMIN_DEVICENAME,
-                            "Database_Name": INFLUXDB_DATABASE
-                        },
-                        "fields": {f"{label}": value}
-                    })
+                    timestamp = datetime.fromtimestamp(datetime.strptime(date_str, "%Y-%m-%d").timestamp(), tz=pytz.timezone("UTC"))
+                    points_list.extend(build_timestamped_point(
+                        "LactateThreshold", timestamp, {f"{label}": value},
+                        device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                    ))
                     logging.info(f"Success : Fetching {label} for date {date_str}")
 
     return points_list
@@ -1244,17 +1240,15 @@ def get_training_status(date_str):
                 "minTrainingLoadChronic": (ts_dict.get("acuteTrainingLoadDTO") or {}).get("minTrainingLoadChronic"),
                 "dailyAcuteChronicWorkloadRatio": (ts_dict.get("acuteTrainingLoadDTO") or {}).get("dailyAcuteChronicWorkloadRatio"),
             }
-            if ts_dict.get("timestamp") and any(value is not None for value in data_fields.values()):
-                points_list.append({
-                    "measurement": "TrainingStatus",
-                    "time": datetime.fromtimestamp(ts_dict["timestamp"]/1000, tz=pytz.timezone("UTC")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": data_fields
-                })
-                logging.info(f"Success : Fetching Training Status for date {date_str}")
+            if ts_dict.get("timestamp"):
+                timestamp = datetime.fromtimestamp(ts_dict["timestamp"]/1000, tz=pytz.timezone("UTC"))
+                points = build_timestamped_point(
+                    "TrainingStatus", timestamp, data_fields,
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                )
+                points_list.extend(points)
+                if points:
+                    logging.info(f"Success : Fetching Training Status for date {date_str}")
     return points_list
 
 # Contribution from PR #17 by @arturgoms 
@@ -1275,17 +1269,19 @@ def get_training_readiness(date_str):
                     "stressHistoryFactorPercent": tr_dict.get("stressHistoryFactorPercent"),
                     "hrvFactorPercent": tr_dict.get("hrvFactorPercent"),
                 }
+            # Guard checked (and short-circuited) before any timestamp
+            # parsing is attempted, same as before -- avoids parsing a
+            # malformed timestamp for an entry whose fields are all None
+            # anyway, which the old inline version also never attempted.
             if (not all(value is None for value in data_fields.values())) and tr_dict.get('timestamp'):
-                points_list.append({
-                    "measurement":  "TrainingReadiness",
-                    "time": pytz.timezone("UTC").localize(datetime.strptime(tr_dict['timestamp'],"%Y-%m-%dT%H:%M:%S.%f")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": data_fields
-                })
-                logging.info(f"Success : Fetching Training Readiness for date {date_str}")
+                timestamp = pytz.timezone("UTC").localize(datetime.strptime(tr_dict['timestamp'], "%Y-%m-%dT%H:%M:%S.%f"))
+                points = build_timestamped_point(
+                    "TrainingReadiness", timestamp, data_fields,
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                )
+                points_list.extend(points)
+                if points:
+                    logging.info(f"Success : Fetching Training Readiness for date {date_str}")
     return points_list
 
 # Contribution from PR #17 by @arturgoms 
@@ -1399,16 +1395,12 @@ def get_blood_pressure(date_str):
                 "Pulse": bp_measurement.get('pulse', None)
             }
             if not all(value is None for value in data_fields.values()) and 'measurementTimestampGMT' in bp_measurement:
-                points_list.append({
-                    "measurement":  "BloodPressure",
-                    "time": pytz.UTC.localize(datetime.strptime(bp_measurement['measurementTimestampGMT'], '%Y-%m-%dT%H:%M:%S.%f')),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE,
-                        "Source": bp_measurement.get('sourceType', None)
-                    },
-                    "fields": data_fields
-                })
+                timestamp = pytz.UTC.localize(datetime.strptime(bp_measurement['measurementTimestampGMT'], '%Y-%m-%dT%H:%M:%S.%f'))
+                points_list.extend(build_timestamped_point(
+                    "BloodPressure", timestamp, data_fields,
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                    extra_tags={"Source": bp_measurement.get('sourceType', None)},
+                ))
         logging.info(f"Success : Fetching Blood Pressure for date {date_str}")
     return points_list
 
@@ -1445,15 +1437,11 @@ def get_solar_intensity(date_str):
                 'activityTimeGainMs': si_measurement.get('activityTimeGainMs', None),
             }
             if not all(value is None for value in data_fields.values()) and 'readingTimestampGmt' in si_measurement:
-                points_list.append({
-                    "measurement":  "SolarIntensity",
-                    "time": pytz.UTC.localize(datetime.strptime(si_measurement['readingTimestampGmt'], '%Y-%m-%dT%H:%M:%S.%f')),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": data_fields
-                })
+                timestamp = pytz.UTC.localize(datetime.strptime(si_measurement['readingTimestampGmt'], '%Y-%m-%dT%H:%M:%S.%f'))
+                points_list.extend(build_timestamped_point(
+                    "SolarIntensity", timestamp, data_fields,
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                ))
         logging.info(f"Success : Fetching Solar Intensity data for date {date_str}")
     if len(points_list) == 0:
         logging.warning(f"No Solar Intensity data available for date {date_str}")
