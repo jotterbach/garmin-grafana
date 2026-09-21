@@ -1244,17 +1244,15 @@ def get_training_status(date_str):
                 "minTrainingLoadChronic": (ts_dict.get("acuteTrainingLoadDTO") or {}).get("minTrainingLoadChronic"),
                 "dailyAcuteChronicWorkloadRatio": (ts_dict.get("acuteTrainingLoadDTO") or {}).get("dailyAcuteChronicWorkloadRatio"),
             }
-            if ts_dict.get("timestamp") and any(value is not None for value in data_fields.values()):
-                points_list.append({
-                    "measurement": "TrainingStatus",
-                    "time": datetime.fromtimestamp(ts_dict["timestamp"]/1000, tz=pytz.timezone("UTC")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": data_fields
-                })
-                logging.info(f"Success : Fetching Training Status for date {date_str}")
+            if ts_dict.get("timestamp"):
+                timestamp = datetime.fromtimestamp(ts_dict["timestamp"]/1000, tz=pytz.timezone("UTC"))
+                points = build_timestamped_point(
+                    "TrainingStatus", timestamp, data_fields,
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                )
+                points_list.extend(points)
+                if points:
+                    logging.info(f"Success : Fetching Training Status for date {date_str}")
     return points_list
 
 # Contribution from PR #17 by @arturgoms 
