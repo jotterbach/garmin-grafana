@@ -1,7 +1,7 @@
 # %%
 import traceback
 import re
-import base64, requests, time, pytz, logging, os, sys, dotenv, io, zipfile
+import requests, time, pytz, logging, os, sys, dotenv, io, zipfile
 from fitparse import FitFile, FitParseError
 from datetime import datetime, timedelta
 from influxdb import InfluxDBClient
@@ -14,6 +14,7 @@ from garminconnect import (
     GarminConnectConnectionError,
     GarminConnectTooManyRequestsError,
 )
+from config import Config
 garmin_obj = None
 banner_text = """
 
@@ -33,45 +34,56 @@ if env_override:
     logging.warning("System ENV variables are overridden with override-default-vars.env")
 
 # %%
-INFLUXDB_VERSION = os.getenv("INFLUXDB_VERSION",'1') # Your influxdb database version (accepted values are '1' or '3')
-assert INFLUXDB_VERSION in ['1','3'], "Only InfluxDB version 1 or 3 is allowed - please ensure to set this value to either 1 or 3"
-INFLUXDB_HOST = os.getenv("INFLUXDB_HOST",'localhost') # Required
-INFLUXDB_PORT = int(os.getenv("INFLUXDB_PORT", 8086)) # Required
-INFLUXDB_USERNAME = os.getenv("INFLUXDB_USERNAME", 'influxdb_username') # Required
-INFLUXDB_PASSWORD = os.getenv("INFLUXDB_PASSWORD", 'influxdb_access_password') # Required
-INFLUXDB_DATABASE = os.getenv("INFLUXDB_DATABASE", 'GarminStats') # Required
-INFLUXDB_V3_ACCESS_TOKEN = os.getenv("INFLUXDB_V3_ACCESS_TOKEN",'') # InfluxDB V3 Access token, required only for InfluxDB V3
-INFLUXDB_ORG = os.getenv("INFLUXDB_ORG", 'default') # required only for InfluxDB V3 
-TOKEN_DIR = os.getenv("TOKEN_DIR", "~/.garminconnect") # optional
-GARMINCONNECT_EMAIL = (os.environ.get("GARMINCONNECT_EMAIL") or "").strip() or None # optional, asks in prompt on run if not provided
-_garmin_pw_b64 = os.getenv("GARMINCONNECT_BASE64_PASSWORD")
-GARMINCONNECT_PASSWORD = base64.b64decode(_garmin_pw_b64).decode("utf-8").strip() if _garmin_pw_b64 else None # optional, asks in prompt on run if not provided
-GARMINCONNECT_IS_CN = True if os.getenv("GARMINCONNECT_IS_CN") in ['True', 'true', 'TRUE','t', 'T', 'yes', 'Yes', 'YES', '1'] else False # optional if you are using a Chinese account
-GARMIN_DEVICENAME = os.getenv("GARMIN_DEVICENAME", "Unknown")  # optional, attempts to set the name automatically if not given
-GARMIN_DEVICEID = os.getenv("GARMIN_DEVICEID", None)  # optional, attempts to set the id automatically if not given
-AUTO_DATE_RANGE = False if os.getenv("AUTO_DATE_RANGE") in ['False','false','FALSE','f','F','no','No','NO','0'] else True # optional
-MANUAL_START_DATE = os.getenv("MANUAL_START_DATE", None) # optional, in YYYY-MM-DD format, if you want to bulk update only from specific date
-MANUAL_END_DATE = os.getenv("MANUAL_END_DATE", datetime.today().strftime('%Y-%m-%d')) # optional, in YYYY-MM-DD format, if you want to bulk update until a specific date
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO") # optional
-FETCH_FAILED_WAIT_SECONDS = int(os.getenv("FETCH_FAILED_WAIT_SECONDS", 1800)) # optional
-RATE_LIMIT_CALLS_SECONDS = int(os.getenv("RATE_LIMIT_CALLS_SECONDS", 5)) # optional
-MAX_CONSECUTIVE_500_ERRORS = int(os.getenv("MAX_CONSECUTIVE_500_ERRORS", 10)) # optional, maximum consecutive HTTP 500 errors before continuing without retrying
-INFLUXDB_ENDPOINT_IS_HTTP = False if os.getenv("INFLUXDB_ENDPOINT_IS_HTTP") in ['False','false','FALSE','f','F','no','No','NO','0'] else True # optional
-GARMIN_DEVICENAME_AUTOMATIC = False if GARMIN_DEVICENAME != "Unknown" else True # optional
-UPDATE_INTERVAL_SECONDS = int(os.getenv("UPDATE_INTERVAL_SECONDS", 300)) # optional
-FETCH_SELECTION = os.getenv("FETCH_SELECTION", "daily_avg,sleep,steps,heartrate,stress,breathing,hrv,fitness_age,vo2,activity,race_prediction,body_composition,lifestyle") # additional available values are lactate_threshold,training_status,training_readiness,hill_score,endurance_score,blood_pressure,hydration,solar_intensity,cycling_dynamics which you can add to the list seperated by , without any space
-ACTIVITY_TYPE_FILTER = [t.strip().lower() for t in os.getenv("ACTIVITY_TYPE_FILTER", "").split(",") if t.strip()] # optional, comma-separated list of activity typeKeys to import only specific activity types. Leave empty to import all. Known typeKeys: running,treadmill_running,indoor_running,cycling,indoor_cycling,road_biking,mountain_biking,walking,hiking,mountaineering,strength_training,hiit,indoor_cardio,elliptical,lap_swimming,open_water_swimming,rock_climbing,indoor_climbing,tennis_v2,kayaking_v2,boating_v2,multi_sport,other
-LACTATE_THRESHOLD_SPORTS = os.getenv("LACTATE_THRESHOLD_SPORTS", "RUNNING").upper().split(",") # Garmin currently implements RUNNING, but has provisions for CYCLING, and SWIMMING
-KEEP_FIT_FILES = True if os.getenv("KEEP_FIT_FILES") in ['True', 'true', 'TRUE','t', 'T', 'yes', 'Yes', 'YES', '1'] else False # optional
-FIT_FILE_STORAGE_LOCATION = os.getenv("FIT_FILE_STORAGE_LOCATION", os.path.join(os.path.expanduser("~"), "fit_filestore"))
-ALWAYS_PROCESS_FIT_FILES = True if os.getenv("ALWAYS_PROCESS_FIT_FILES") in ['True', 'true', 'TRUE','t', 'T', 'yes', 'Yes', 'YES', '1'] else False # optional, will process all FIT files for all activities including indoor ones lacking GPS data
-REQUEST_INTRADAY_DATA_REFRESH = True if os.getenv("REQUEST_INTRADAY_DATA_REFRESH") in ['True', 'true', 'TRUE','t', 'T', 'yes', 'Yes', 'YES', '1'] else False # optional, This requests data refresh for the intraday data (older than 6 months) - see issue #77. Pauses the script for 24 hours when the daily limit is reached.
-IGNORE_INTRADAY_DATA_REFRESH_DAYS = int(os.getenv("IGNORE_INTRADAY_DATA_REFRESH_DAYS", 30)) # optional, ignores the REQUEST_INTRADAY_DATA_REFRESH for the specified number of days from current date. 
-TAG_MEASUREMENTS_WITH_USER_EMAIL = True if os.getenv("TAG_MEASUREMENTS_WITH_USER_EMAIL") in ['True', 'true', 'TRUE','t', 'T', 'yes', 'Yes', 'YES', '1'] else False # Adds an additional "User_ID" tag in each measurement for multi user database support - see #96
-FORCE_REPROCESS_ACTIVITIES = False if os.getenv("FORCE_REPROCESS_ACTIVITIES") in ['False','false','FALSE','f','F','no','No','NO','0'] else True # optional, will enable re-processing of fit files when set to true, may skip activities if set to false (issue #30)
-USER_TIMEZONE = os.getenv("USER_TIMEZONE", "") # optional, fetches timezone info from last activity automatically if left blank
+# All env-var parsing lives in config.py now (extracted so it's unit-testable
+# without a subprocess or a live InfluxDB). Bridged back to the same bare
+# module-level names below since the rest of this file (and the sibling
+# scripts that reach into it) still reads them that way -- see config.py's
+# module docstring for why this is a deliberate, temporary bridge rather than
+# threading Config through every function in this step.
+CONFIG = Config.from_env()
+INFLUXDB_VERSION = CONFIG.influxdb_version
+INFLUXDB_HOST = CONFIG.influxdb_host
+INFLUXDB_PORT = CONFIG.influxdb_port
+INFLUXDB_USERNAME = CONFIG.influxdb_username
+INFLUXDB_PASSWORD = CONFIG.influxdb_password
+INFLUXDB_DATABASE = CONFIG.influxdb_database
+INFLUXDB_V3_ACCESS_TOKEN = CONFIG.influxdb_v3_access_token
+INFLUXDB_ORG = CONFIG.influxdb_org
+INFLUXDB_ENDPOINT_IS_HTTP = CONFIG.influxdb_endpoint_is_http
+TOKEN_DIR = CONFIG.token_dir
+GARMINCONNECT_EMAIL = CONFIG.garminconnect_email
+GARMINCONNECT_PASSWORD = CONFIG.garminconnect_password
+GARMINCONNECT_IS_CN = CONFIG.garminconnect_is_cn
+# GARMIN_DEVICENAME / GARMIN_DEVICEID are reassigned at runtime by
+# get_last_sync() (via `global`) once auto-detection resolves the real
+# device -- these are just their initial values from config, not read back
+# through CONFIG after that point.
+GARMIN_DEVICENAME = CONFIG.garmin_devicename
+GARMIN_DEVICEID = CONFIG.garmin_deviceid
+GARMIN_DEVICENAME_AUTOMATIC = CONFIG.garmin_devicename_automatic
+AUTO_DATE_RANGE = CONFIG.auto_date_range
+MANUAL_START_DATE = CONFIG.manual_start_date
+MANUAL_END_DATE = CONFIG.manual_end_date
+LOG_LEVEL = CONFIG.log_level
+FETCH_FAILED_WAIT_SECONDS = CONFIG.fetch_failed_wait_seconds
+RATE_LIMIT_CALLS_SECONDS = CONFIG.rate_limit_calls_seconds
+MAX_CONSECUTIVE_500_ERRORS = CONFIG.max_consecutive_500_errors
+UPDATE_INTERVAL_SECONDS = CONFIG.update_interval_seconds
+FETCH_SELECTION = CONFIG.fetch_selection
+ACTIVITY_TYPE_FILTER = CONFIG.activity_type_filter
+LACTATE_THRESHOLD_SPORTS = CONFIG.lactate_threshold_sports
+KEEP_FIT_FILES = CONFIG.keep_fit_files
+FIT_FILE_STORAGE_LOCATION = CONFIG.fit_file_storage_location
+ALWAYS_PROCESS_FIT_FILES = CONFIG.always_process_fit_files
+REQUEST_INTRADAY_DATA_REFRESH = CONFIG.request_intraday_data_refresh
+IGNORE_INTRADAY_DATA_REFRESH_DAYS = CONFIG.ignore_intraday_data_refresh_days
+TAG_MEASUREMENTS_WITH_USER_EMAIL = CONFIG.tag_measurements_with_user_email
+FORCE_REPROCESS_ACTIVITIES = CONFIG.force_reprocess_activities
+USER_TIMEZONE = CONFIG.user_timezone
+IGNORE_ERRORS = CONFIG.ignore_errors
+
+# Genuine mutable runtime state (an accumulator), not config -- stays here.
 PARSED_ACTIVITY_ID_LIST = []
-IGNORE_ERRORS = True if os.getenv("IGNORE_ERRORS") in ['True', 'true', 'TRUE','t', 'T', 'yes', 'Yes', 'YES', '1'] else False
 
 # %%
 for handler in logging.root.handlers[:]:

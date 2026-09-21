@@ -1,14 +1,12 @@
 """
-Cheap, direct unit tests for small pure-logic pieces of garmin_fetch.py, plus
-a couple of subprocess-based checks that the hand-rolled boolean env-var
-parsing (repeated ~15 times across the module, e.g. garmin_fetch.py:65,67,68)
-still accepts both truthy and falsy string forms correctly.
+Cheap, direct unit tests for small pure-logic pieces of garmin_fetch.py.
 
-Subprocess-based because the parsing happens inline at module import time
-into module-level constants, not through a shared helper function -- the
-only way to test a specific env var's effect is to import the module fresh
-in its own process with that var set, same pattern used by
-claude-local-devbox-mcp's ServerStartupTests.
+Env-var parsing itself now lives in config.py and has its own fast, direct
+unit tests in tests/test_config.py (Config.from_env(dict), no subprocess or
+InfluxDB needed). What's left here is a single subprocess-based check that
+garmin_fetch.py's *bridging* from Config to its bare module-level constants
+(garmin_fetch.py's CONFIG.xxx -> XXX assignments) still works end-to-end in
+a real process -- not a re-test of the parsing logic itself.
 """
 
 import os
@@ -16,9 +14,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-
 REPO_ROOT = Path(__file__).parent.parent
+SRC_PACKAGE_DIR = REPO_ROOT / "src" / "garmin_grafana"
 
 
 def test_iter_days_is_reverse_chronological_and_inclusive(garmin_fetch_module):
@@ -26,10 +23,8 @@ def test_iter_days_is_reverse_chronological_and_inclusive(garmin_fetch_module):
     assert days == ["2026-01-15", "2026-01-14", "2026-01-13"]
 
 
-def test_iter_days_single_day():
-    from garmin_grafana import garmin_fetch
-
-    assert list(garmin_fetch.iter_days("2026-01-15", "2026-01-15")) == ["2026-01-15"]
+def test_iter_days_single_day(garmin_fetch_module):
+    assert list(garmin_fetch_module.iter_days("2026-01-15", "2026-01-15")) == ["2026-01-15"]
 
 
 class _FakeResponse:
@@ -53,25 +48,12 @@ def test_is_http_status_error_falls_back_to_string_match(garmin_fetch_module):
     assert garmin_fetch_module._is_http_status_error(err, 429) is True
 
 
-@pytest.mark.parametrize(
-    "value,expected",
-    [
-        ("True", True),
-        ("true", True),
-        ("1", True),
-        ("yes", True),
-        ("False", False),
-        ("false", False),
-        ("0", False),
-        ("no", False),
-    ],
-)
-def test_keep_fit_files_env_var_parsing(value, expected):
+def test_keep_fit_files_bridges_from_config_end_to_end():
     env = os.environ.copy()
-    env["KEEP_FIT_FILES"] = value
+    env["KEEP_FIT_FILES"] = "yes"
     result = subprocess.run(
-        [sys.executable, "-c", "from garmin_grafana import garmin_fetch; print(garmin_fetch.KEEP_FIT_FILES)"],
-        cwd=str(REPO_ROOT / "src"),
+        [sys.executable, "-c", "import garmin_fetch; print(garmin_fetch.KEEP_FIT_FILES)"],
+        cwd=str(SRC_PACKAGE_DIR),
         env=env,
         capture_output=True,
         text=True,
@@ -81,4 +63,4 @@ def test_keep_fit_files_env_var_parsing(value, expected):
     # garmin_fetch.py prints a banner at import time (garmin_fetch.py:29), so
     # only the last line of stdout is the value we actually printed.
     last_line = result.stdout.strip().splitlines()[-1]
-    assert last_line == str(expected)
+    assert last_line == "True"
