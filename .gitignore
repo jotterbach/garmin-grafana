@@ -1,4 +1,5 @@
 garminconnect-tokens/
+fit_filestore/
 override-default-vars.env
 .env
 kubernetes-spec.yaml
