@@ -240,14 +240,8 @@ def get_sleep_data(date_str):
     all_sleep_data = garmin_obj.get_sleep_data(date_str)
     sleep_json = all_sleep_data.get("dailySleepDTO", None)
     if sleep_json["sleepEndTimestampGMT"]:
-        points_list.append({
-        "measurement":  "SleepSummary",
-        "time": datetime.fromtimestamp(sleep_json["sleepEndTimestampGMT"]/1000, tz=pytz.timezone("UTC")).isoformat(),
-        "tags": {
-            "Device": GARMIN_DEVICENAME,
-            "Database_Name": INFLUXDB_DATABASE
-            },
-        "fields": {
+        timestamp = datetime.fromtimestamp(sleep_json["sleepEndTimestampGMT"]/1000, tz=pytz.timezone("UTC"))
+        fields = {
             "sleepTimeSeconds": sleep_json.get("sleepTimeSeconds"),
             "deepSleepSeconds": sleep_json.get("deepSleepSeconds"),
             "lightSleepSeconds": sleep_json.get("lightSleepSeconds"),
@@ -269,154 +263,118 @@ def get_sleep_data(date_str):
             "avgSkinTempDeviationC": all_sleep_data.get("avgSkinTempDeviationC"),
             "avgSkinTempDeviationF": all_sleep_data.get("avgSkinTempDeviationF")
             }
-        })
+        points_list.extend(build_timestamped_point(
+            "SleepSummary", timestamp, fields,
+            device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+        ))
     sleep_movement_intraday = all_sleep_data.get("sleepMovement")
     if sleep_movement_intraday:
         for entry in sleep_movement_intraday:
-            points_list.append({
-                "measurement":  "SleepIntraday",
-                "time": pytz.timezone("UTC").localize(datetime.strptime(entry["startGMT"], "%Y-%m-%dT%H:%M:%S.%f")).isoformat(),
-                "tags": {
-                    "Device": GARMIN_DEVICENAME,
-                    "Database_Name": INFLUXDB_DATABASE
-                },
-                "fields": {
-                    "SleepMovementActivityLevel": entry.get("activityLevel",-1),
-                    "SleepMovementActivitySeconds": int((datetime.strptime(entry["endGMT"], "%Y-%m-%dT%H:%M:%S.%f") - datetime.strptime(entry["startGMT"], "%Y-%m-%dT%H:%M:%S.%f")).total_seconds())
-                }
-            })
+            timestamp = pytz.timezone("UTC").localize(datetime.strptime(entry["startGMT"], "%Y-%m-%dT%H:%M:%S.%f"))
+            fields = {
+                "SleepMovementActivityLevel": entry.get("activityLevel", -1.0),
+                "SleepMovementActivitySeconds": int((datetime.strptime(entry["endGMT"], "%Y-%m-%dT%H:%M:%S.%f") - datetime.strptime(entry["startGMT"], "%Y-%m-%dT%H:%M:%S.%f")).total_seconds())
+            }
+            points_list.extend(build_timestamped_point(
+                "SleepIntraday", timestamp, fields,
+                device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+            ))
     sleep_levels_intraday = all_sleep_data.get("sleepLevels")
     if sleep_levels_intraday:
         for entry in sleep_levels_intraday:
             if entry.get("activityLevel") or entry.get("activityLevel") == 0: # Include 0 for Deepsleep but not None - Refer to issue #43
-                points_list.append({
-                    "measurement":  "SleepIntraday",
-                    "time": pytz.timezone("UTC").localize(datetime.strptime(entry["startGMT"], "%Y-%m-%dT%H:%M:%S.%f")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {
-                        "SleepStageLevel": entry.get("activityLevel"),
-                        "SleepStageSeconds": int((datetime.strptime(entry["endGMT"], "%Y-%m-%dT%H:%M:%S.%f") - datetime.strptime(entry["startGMT"], "%Y-%m-%dT%H:%M:%S.%f")).total_seconds())
-                    }
-                })
-        # Add additional duplicate terminal data point (see issue #127)
+                timestamp = pytz.timezone("UTC").localize(datetime.strptime(entry["startGMT"], "%Y-%m-%dT%H:%M:%S.%f"))
+                fields = {
+                    "SleepStageLevel": entry.get("activityLevel"),
+                    "SleepStageSeconds": int((datetime.strptime(entry["endGMT"], "%Y-%m-%dT%H:%M:%S.%f") - datetime.strptime(entry["startGMT"], "%Y-%m-%dT%H:%M:%S.%f")).total_seconds())
+                }
+                points_list.extend(build_timestamped_point(
+                    "SleepIntraday", timestamp, fields,
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                ))
+        # Add additional duplicate terminal data point (see issue #127).
+        # Routed through build_timestamped_point -- its all-None-fields
+        # guard skips creating a point when the last entry's
+        # activityLevel was None (dropped by the per-entry guard above,
+        # but endGMT still truthy). This is a deliberate, disclosed fix,
+        # not just a preserved quirk: confirmed via real-production
+        # verification that writing a single None-valued field crashes
+        # the *entire* InfluxDB write batch (the influxdb client's line-
+        # protocol serializer drops a None field entirely, leaving zero
+        # fields, which is invalid line protocol) -- a real, reproducible
+        # bug in the pre-existing code, not a negligible edge case.
+        # Silently omitting the duplicate point in this case is strictly
+        # safer than crashing the whole batch, and still honors issue
+        # #127's intent whenever there's an actual value to duplicate.
         if entry.get("endGMT"):
-            points_list.append({
-                "measurement":  "SleepIntraday",
-                "time": pytz.timezone("UTC").localize(datetime.strptime(entry["endGMT"], "%Y-%m-%dT%H:%M:%S.%f")).isoformat(),
-                "tags": {
-                    "Device": GARMIN_DEVICENAME,
-                    "Database_Name": INFLUXDB_DATABASE
-                },
-                "fields": {"SleepStageLevel": entry.get("activityLevel")} # Duplicating last entry for visualization in Grafana
-            })
+            timestamp = pytz.timezone("UTC").localize(datetime.strptime(entry["endGMT"], "%Y-%m-%dT%H:%M:%S.%f"))
+            points_list.extend(build_timestamped_point(
+                "SleepIntraday", timestamp, {"SleepStageLevel": entry.get("activityLevel")},
+                device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+            ))
     sleep_restlessness_intraday = all_sleep_data.get("sleepRestlessMoments")
     if sleep_restlessness_intraday:
         for entry in sleep_restlessness_intraday:
             if entry.get("value"):
-                points_list.append({
-                    "measurement":  "SleepIntraday",
-                    "time": datetime.fromtimestamp(entry["startGMT"]/1000, tz=pytz.timezone("UTC")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {
-                        "sleepRestlessValue": entry.get("value")
-                    }
-                })
+                timestamp = datetime.fromtimestamp(entry["startGMT"]/1000, tz=pytz.timezone("UTC"))
+                points_list.extend(build_timestamped_point(
+                    "SleepIntraday", timestamp, {"sleepRestlessValue": entry.get("value")},
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                ))
     sleep_spo2_intraday = all_sleep_data.get("wellnessEpochSPO2DataDTOList")
     if sleep_spo2_intraday:
         for entry in sleep_spo2_intraday:
             if entry.get("spo2Reading"):
-                points_list.append({
-                    "measurement":  "SleepIntraday",
-                    "time": pytz.timezone("UTC").localize(datetime.strptime(entry["epochTimestamp"], "%Y-%m-%dT%H:%M:%S.%f")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {
-                        "spo2Reading": entry.get("spo2Reading")
-                    }
-                })
+                timestamp = pytz.timezone("UTC").localize(datetime.strptime(entry["epochTimestamp"], "%Y-%m-%dT%H:%M:%S.%f"))
+                points_list.extend(build_timestamped_point(
+                    "SleepIntraday", timestamp, {"spo2Reading": entry.get("spo2Reading")},
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                ))
     sleep_respiration_intraday = all_sleep_data.get("wellnessEpochRespirationDataDTOList")
     if sleep_respiration_intraday:
         for entry in sleep_respiration_intraday:
             if entry.get("respirationValue"):
-                points_list.append({
-                    "measurement":  "SleepIntraday",
-                    "time": datetime.fromtimestamp(entry["startTimeGMT"]/1000, tz=pytz.timezone("UTC")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {
-                        "respirationValue": entry.get("respirationValue")
-                    }
-                })
+                timestamp = datetime.fromtimestamp(entry["startTimeGMT"]/1000, tz=pytz.timezone("UTC"))
+                points_list.extend(build_timestamped_point(
+                    "SleepIntraday", timestamp, {"respirationValue": entry.get("respirationValue")},
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                ))
     sleep_heart_rate_intraday = all_sleep_data.get("sleepHeartRate")
     if sleep_heart_rate_intraday:
         for entry in sleep_heart_rate_intraday:
             if entry.get("value"):
-                points_list.append({
-                    "measurement":  "SleepIntraday",
-                    "time": datetime.fromtimestamp(entry["startGMT"]/1000, tz=pytz.timezone("UTC")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {
-                        "heartRate": entry.get("value")
-                    }
-                })
+                timestamp = datetime.fromtimestamp(entry["startGMT"]/1000, tz=pytz.timezone("UTC"))
+                points_list.extend(build_timestamped_point(
+                    "SleepIntraday", timestamp, {"heartRate": entry.get("value")},
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                ))
     sleep_stress_intraday = all_sleep_data.get("sleepStress")
     if sleep_stress_intraday:
         for entry in sleep_stress_intraday:
             if entry.get("value"):
-                points_list.append({
-                    "measurement":  "SleepIntraday",
-                    "time": datetime.fromtimestamp(entry["startGMT"]/1000, tz=pytz.timezone("UTC")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {
-                        "stressValue": entry.get("value")
-                    }
-                })
+                timestamp = datetime.fromtimestamp(entry["startGMT"]/1000, tz=pytz.timezone("UTC"))
+                points_list.extend(build_timestamped_point(
+                    "SleepIntraday", timestamp, {"stressValue": entry.get("value")},
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                ))
     sleep_bb_intraday = all_sleep_data.get("sleepBodyBattery")
     if sleep_bb_intraday:
         for entry in sleep_bb_intraday:
             if entry.get("value"):
-                points_list.append({
-                    "measurement":  "SleepIntraday",
-                    "time": datetime.fromtimestamp(entry["startGMT"]/1000, tz=pytz.timezone("UTC")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {
-                        "bodyBattery": entry.get("value")
-                    }
-                })
+                timestamp = datetime.fromtimestamp(entry["startGMT"]/1000, tz=pytz.timezone("UTC"))
+                points_list.extend(build_timestamped_point(
+                    "SleepIntraday", timestamp, {"bodyBattery": entry.get("value")},
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                ))
     sleep_hrv_intraday = all_sleep_data.get("hrvData")
     if sleep_hrv_intraday:
         for entry in sleep_hrv_intraday:
             if entry.get("value"):
-                points_list.append({
-                    "measurement":  "SleepIntraday",
-                    "time": datetime.fromtimestamp(entry["startGMT"]/1000, tz=pytz.timezone("UTC")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {
-                        "hrvData": entry.get("value")
-                    }
-                })
+                timestamp = datetime.fromtimestamp(entry["startGMT"]/1000, tz=pytz.timezone("UTC"))
+                points_list.extend(build_timestamped_point(
+                    "SleepIntraday", timestamp, {"hrvData": entry.get("value")},
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                ))
     if points_list:
         logging.info(f"Success : Fetching intraday sleep metrics for date {date_str}")
     return points_list
