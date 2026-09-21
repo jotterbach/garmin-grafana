@@ -1401,16 +1401,12 @@ def get_blood_pressure(date_str):
                 "Pulse": bp_measurement.get('pulse', None)
             }
             if not all(value is None for value in data_fields.values()) and 'measurementTimestampGMT' in bp_measurement:
-                points_list.append({
-                    "measurement":  "BloodPressure",
-                    "time": pytz.UTC.localize(datetime.strptime(bp_measurement['measurementTimestampGMT'], '%Y-%m-%dT%H:%M:%S.%f')),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE,
-                        "Source": bp_measurement.get('sourceType', None)
-                    },
-                    "fields": data_fields
-                })
+                timestamp = pytz.UTC.localize(datetime.strptime(bp_measurement['measurementTimestampGMT'], '%Y-%m-%dT%H:%M:%S.%f'))
+                points_list.extend(build_timestamped_point(
+                    "BloodPressure", timestamp, data_fields,
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                    extra_tags={"Source": bp_measurement.get('sourceType', None)},
+                ))
         logging.info(f"Success : Fetching Blood Pressure for date {date_str}")
     return points_list
 

@@ -6,10 +6,11 @@ get_training_status, get_solar_intensity, get_lactate_threshold.
 
 Each test is written and confirmed passing against the *current*
 (pre-migration) implementation first, then must keep passing unchanged
-after that function is refactored.
+after that function is refactored -- except where a function's migration
+involves a disclosed behavioral change (see test_blood_pressure_exact_point_shape's
+docstring), in which case the test is updated to match the new, understood
+behavior rather than kept red.
 """
-
-from datetime import datetime, timezone
 
 DATE_STR = "2026-01-15"
 
@@ -37,29 +38,30 @@ def test_training_readiness_exact_point_shape(garmin_fetch_module):
     ]
 
 
-def test_blood_pressure_exact_point_shape_before_refactor(garmin_fetch_module):
+def test_blood_pressure_exact_point_shape(garmin_fetch_module):
     """
-    Captures get_blood_pressure's CURRENT exact behavior, including a real
-    pre-existing inconsistency: unlike get_training_readiness, this function
-    never calls .isoformat() -- "time" is a raw datetime object, not a
-    string. This test documents that baseline; it is deliberately NOT kept
-    passing unchanged after the refactor (see
-    test_blood_pressure_exact_point_shape_after_refactor below) because
-    routing through build_timestamped_point's auto-isoformat-conversion
-    normalizes this to a string -- a disclosed, understood change to this
-    function's *return value*, not to what ultimately gets written to
-    InfluxDB (the influxdb client accepts both types identically; this
-    exact raw-datetime code has been running in production without issue).
+    Post-migration point shape for get_blood_pressure, now routed through
+    build_timestamped_point. Pre-refactor, this function built its "time"
+    field from a raw datetime object (no .isoformat() call) -- unlike
+    get_training_readiness, which already called .isoformat(). Migrating
+    through the shared helper normalizes "time" to the isoformat string
+    seen below; this is a disclosed, understood change to this function's
+    Python-level return value, not to what ultimately gets written to
+    InfluxDB (the influxdb client accepts both raw datetime objects and ISO
+    strings identically, and this exact raw-datetime code ran successfully
+    in production for a long time). Everything else (measurement, tags
+    including the extra "Source" tag, fields) is unchanged from before.
     """
     points = garmin_fetch_module.get_blood_pressure(DATE_STR)
-    assert len(points) == 1
-    point = points[0]
-    assert point["measurement"] == "BloodPressure"
-    assert point["time"] == datetime(2026, 1, 15, 6, 30, tzinfo=timezone.utc)
-    assert isinstance(point["time"], datetime)  # not a string, today
-    assert point["tags"] == {
-        "Device": "TestDevice",
-        "Database_Name": "SmokeTestDB",
-        "Source": "MANUAL",
-    }
-    assert point["fields"] == {"Systolic": 120, "Diastolic": 80, "Pulse": 65}
+    assert points == [
+        {
+            "measurement": "BloodPressure",
+            "time": "2026-01-15T06:30:00+00:00",
+            "tags": {
+                "Device": "TestDevice",
+                "Database_Name": "SmokeTestDB",
+                "Source": "MANUAL",
+            },
+            "fields": {"Systolic": 120, "Diastolic": 80, "Pulse": 65},
+        }
+    ]
