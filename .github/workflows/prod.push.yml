@@ -24,8 +24,12 @@ env:
   IMAGE_REPO: thisisarpanghosh
 
 jobs:
+  test:
+    uses: ./.github/workflows/_run-tests.yml
+
   build_and_push:
     name: Build Multi-Arch Docker Image and Push to Docker Hub & GHCR
+    needs: test
     if: ${{ github.repository == 'arpanghosh8453/garmin-grafana' }}
     runs-on: ubuntu-latest
     permissions:

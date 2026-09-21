@@ -32,6 +32,7 @@ A docker container to fetch data from Garmin servers and store the data in a loc
   - How to [export data as CSV files](#export-data-to-csv-files) for AI insights?
   - How to [backup the InfluxDB Database?](#backup-influxdb-database)
   - How to use [multiple accounts](#multi-user-instance-setup)? - if you want to set up a dashboard for your spouse
+  - [Running tests](#running-tests)
   - [Troubleshooting](#troubleshooting) Guide
   - [Need Help?](#need-help)
   - [Want a Desktop App?](#want-a-desktop-app)
@@ -315,6 +316,26 @@ The above bash script would create a folder named `influxdb_backups` inside your
 For restoring the data from a backup, you first need to make the files available inside the new influxdb docker container. You can use `docker cp` or volume bind mount for this. Once the backup data is available to the container internally, you can simply run `docker exec influxdb influxd restore -portable -db GarminStats /path/to/internal-backup-directory` to restore the backup.
 
 Please read detailed guide on this from the [influxDB documentation for backup and restore](https://docs.influxdata.com/influxdb/v1/administration/backup_and_restore/)
+
+## Running tests
+
+This fork adds a smoke-test suite (`tests/`) that runs against a real,
+disposable InfluxDB instance with a faked Garmin API backend — it never
+needs real Garmin credentials or network access, and never touches your
+actual deployment's data. Scope is deliberately smoke-level: does the
+module still import, does the default fetch pipeline still complete without
+exploding, does a write round-trip through InfluxDB correctly. Not
+exhaustive per-field correctness coverage.
+
+```bash
+docker run --rm -d -p 18086:8086 --name garmin-grafana-test-influxdb influxdb:1.11
+uv sync --group test
+TEST_INFLUXDB_HOST=127.0.0.1 TEST_INFLUXDB_PORT=18086 uv run pytest -v
+```
+
+The same suite runs in CI on every push/PR (`.github/workflows/ci.yml`), and
+gates the `:latest` image publish workflow (`.github/workflows/prod.push.yml`)
+— a push to `main` only builds and publishes if the smoke tests pass first.
 
 ## Troubleshooting
 

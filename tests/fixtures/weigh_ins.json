@@ -1,0 +1,33 @@
+{
+  "dailyWeightSummaries": [
+    {
+      "summaryDate": "2026-01-15",
+      "numOfWeightEntries": 1,
+      "minWeight": 72500.0,
+      "maxWeight": 72500.0,
+      "latestWeight": 72500.0,
+      "allWeightMetrics": [
+        {
+          "samplePk": 1234567890123,
+          "date": 1768521600000,
+          "calendarDate": "2026-01-15",
+          "weight": 72500.0,
+          "bmi": 22.4,
+          "bodyFat": 15.2,
+          "bodyWater": 58.1,
+          "boneMass": 3200.0,
+          "muscleMass": 34500.0,
+          "physiqueRating": 5,
+          "visceralFat": 4,
+          "metabolicAge": 28,
+          "sourceType": "MANUAL",
+          "timestampGMT": 1768521600000,
+          "weightDelta": -200.0
+        }
+      ]
+    }
+  ],
+  "totalAverage": {},
+  "previousDateWeight": {},
+  "nextDateWeight": {}
+}
