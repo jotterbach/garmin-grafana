@@ -15,3 +15,11 @@ dependencies = [
 
 [project.scripts]
 garmin-fetch = "garmin_grafana:main"
+
+[dependency-groups]
+test = [
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

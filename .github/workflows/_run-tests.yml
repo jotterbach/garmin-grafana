@@ -1,0 +1,37 @@
+name: Run smoke test suite
+
+on:
+  workflow_call:
+
+jobs:
+  test:
+    name: Smoke tests (pytest)
+    runs-on: ubuntu-latest
+    services:
+      influxdb:
+        image: influxdb:1.11
+        ports:
+          - 18086:8086
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Install dependencies (including test group)
+        run: uv sync --locked --group test
+
+      - name: Wait for InfluxDB to accept connections
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:18086/ping && break
+            sleep 1
+          done
+
+      - name: Run smoke tests
+        env:
+          TEST_INFLUXDB_HOST: 127.0.0.1
+          TEST_INFLUXDB_PORT: 18086
+        run: uv run pytest -v

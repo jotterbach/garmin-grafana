@@ -1,0 +1,94 @@
+{
+  "daily_stats": {
+    "wellnessStartTimeGmt": "2026-01-15T06:00:00.0",
+    "activeKilocalories": 650,
+    "bmrKilocalories": 1650,
+    "totalSteps": 9800,
+    "totalDistanceMeters": 7200.0,
+    "highlyActiveSeconds": 1800,
+    "activeSeconds": 5400,
+    "sedentarySeconds": 43200,
+    "sleepingSeconds": 25200,
+    "moderateIntensityMinutes": 45,
+    "vigorousIntensityMinutes": 20,
+    "floorsAscendedInMeters": 24.4,
+    "floorsDescendedInMeters": 24.4,
+    "floorsAscended": 8,
+    "floorsDescended": 8,
+    "minHeartRate": 48,
+    "maxHeartRate": 172,
+    "restingHeartRate": 52,
+    "minAvgHeartRate": 50,
+    "maxAvgHeartRate": 148,
+    "avgSkinTempDeviationC": -0.2,
+    "avgSkinTempDeviationF": -0.36
+  },
+  "steps": [
+    {"startGMT": "2026-01-15T06:00:00.0", "endGMT": "2026-01-15T06:15:00.0", "steps": 320, "primaryActivityLevel": "active"},
+    {"startGMT": "2026-01-15T06:15:00.0", "endGMT": "2026-01-15T06:30:00.0", "steps": 0, "primaryActivityLevel": "sedentary"}
+  ],
+  "heart_rates": {
+    "heartRateValues": [
+      [1768460400000, 58],
+      [1768460700000, 61]
+    ]
+  },
+  "stress": {
+    "stressValuesArray": [
+      [1768460400000, 22],
+      [1768460700000, 28]
+    ],
+    "bodyBatteryValuesArray": [
+      [1768460400000, "MEASURED", 74, 3.0],
+      [1768460700000, "MEASURED", 72, 3.0]
+    ]
+  },
+  "respiration": {
+    "respirationValuesArray": [
+      [1768460400000, 14.0],
+      [1768460700000, 14.5]
+    ]
+  },
+  "hrv": {
+    "hrvReadings": [
+      {"readingTimeGMT": "2026-01-15T06:00:00.0", "hrvValue": 45}
+    ]
+  },
+  "fitness_age": {
+    "chronologicalAge": 32,
+    "fitnessAge": 27,
+    "achievableFitnessAge": 24
+  },
+  "max_metrics": [
+    {
+      "generic": {"vo2MaxPreciseValue": 47.2},
+      "cycling": {"vo2MaxPreciseValue": null}
+    }
+  ],
+  "race_predictions": [
+    {"time5K": 1320, "time10K": 2760, "timeHalfMarathon": 6120, "timeMarathon": 12900}
+  ],
+  "lifestyle": {
+    "dailyLogsReport": [
+      {
+        "name": "Alcohol",
+        "category": "SUBSTANCE",
+        "logStatus": "NO",
+        "details": []
+      },
+      {
+        "name": "Caffeine",
+        "category": "SUBSTANCE",
+        "logStatus": "YES",
+        "details": [{"amount": 95.0}]
+      }
+    ]
+  },
+  "hr_zones": [
+    {"zoneNumber": 1, "zoneLowBoundary": 95},
+    {"zoneNumber": 2, "zoneLowBoundary": 130},
+    {"zoneNumber": 3, "zoneLowBoundary": 150},
+    {"zoneNumber": 4, "zoneLowBoundary": 165},
+    {"zoneNumber": 5, "zoneLowBoundary": 178}
+  ]
+}
