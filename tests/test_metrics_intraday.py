@@ -191,3 +191,54 @@ def test_daily_stats_exact_point_shape(garmin_fetch_module):
             },
         }
     ]
+
+
+def test_body_composition_exact_point_shape(garmin_fetch_module):
+    """Two weigh-in entries: the first has a real timestampGMT (used
+    as-is, even though it happens to be on a different calendar day than
+    DATE_STR -- the API's own timestamp always wins); the second has a
+    null timestampGMT and falls back to DATE_STR's midnight (issue #15).
+    """
+    points = garmin_fetch_module.get_body_composition(DATE_STR)
+    assert points == [
+        {
+            "measurement": "BodyComposition",
+            "time": "2026-01-16T00:00:00+00:00",
+            "tags": {
+                "Device": "TestDevice",
+                "Database_Name": "SmokeTestDB",
+                "Frequency": "Intraday",
+                "SourceType": "MANUAL",
+            },
+            "fields": {
+                "weight": 72500.0,
+                "bmi": 22.4,
+                "bodyFat": 15.2,
+                "bodyWater": 58.1,
+                "boneMass": 3200,
+                "muscleMass": 34500,
+                "physiqueRating": 5,
+                "visceralFat": 4,
+            },
+        },
+        {
+            "measurement": "BodyComposition",
+            "time": "2026-01-15T00:00:00+00:00",
+            "tags": {
+                "Device": "TestDevice",
+                "Database_Name": "SmokeTestDB",
+                "Frequency": "Intraday",
+                "SourceType": "INDEX_SCALE",
+            },
+            "fields": {
+                "weight": 72400.0,
+                "bmi": 22.3,
+                "bodyFat": None,
+                "bodyWater": None,
+                "boneMass": None,
+                "muscleMass": None,
+                "physiqueRating": None,
+                "visceralFat": None,
+            },
+        },
+    ]
