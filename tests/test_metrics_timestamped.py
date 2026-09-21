@@ -12,6 +12,8 @@ docstring), in which case the test is updated to match the new, understood
 behavior rather than kept red.
 """
 
+from datetime import datetime
+
 DATE_STR = "2026-01-15"
 
 
@@ -59,6 +61,25 @@ def test_training_status_exact_point_shape(garmin_fetch_module):
             },
         }
     ]
+
+
+def test_solar_intensity_exact_point_shape_before_refactor(garmin_fetch_module):
+    """
+    Captures get_solar_intensity's CURRENT exact behavior. Same
+    raw-datetime-object "time" inconsistency as get_blood_pressure's
+    pre-refactor code (no .isoformat() call) -- see that function's
+    now-updated test for the full rationale. This test documents that
+    baseline; it is deliberately superseded once the refactor lands (see
+    test_solar_intensity_exact_point_shape below), the same way
+    get_blood_pressure's before/after pair was handled.
+    """
+    points = garmin_fetch_module.get_solar_intensity(DATE_STR)
+    assert len(points) == 1
+    point = points[0]
+    assert point["measurement"] == "SolarIntensity"
+    assert isinstance(point["time"], datetime)  # not a string, today
+    assert point["tags"] == {"Device": "TestDevice", "Database_Name": "SmokeTestDB"}
+    assert point["fields"] == {"solarUtilization": 45, "activityTimeGainMs": 1200}
 
 
 def test_blood_pressure_exact_point_shape(garmin_fetch_module):
