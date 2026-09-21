@@ -114,3 +114,20 @@ def test_endurance_score_zero_value_is_treated_as_no_data(garmin_fetch_module):
     garmin_fetch_module.garmin_obj._daily["endurance_score"] = {"overallScore": 0}
     points = garmin_fetch_module.get_endurance_score(DATE_STR)
     assert points == []
+
+
+def test_hydration_exact_point_shape(garmin_fetch_module):
+    points = garmin_fetch_module.get_hydration(DATE_STR)
+    assert points == [
+        {
+            "measurement": "Hydration",
+            "time": "2026-01-15T00:00:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {
+                "ValueInML": 1800,
+                "SweatLossInML": 450,
+                "GoalInML": 3000,
+                "ActivityIntakeInML": 200,
+            },
+        }
+    ]
