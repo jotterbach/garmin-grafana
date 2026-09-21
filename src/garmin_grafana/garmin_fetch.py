@@ -1413,26 +1413,20 @@ def get_blood_pressure(date_str):
     return points_list
 
 def get_hydration(date_str):
-    points_list = []
     hydration_dict = garmin_obj.get_hydration_data(date_str)
-    data_fields = {
+    fields = {
         'ValueInML': hydration_dict.get('valueInML', None),
         "SweatLossInML": hydration_dict.get('sweatLossInML', None),
         "GoalInML": hydration_dict.get('goalInML', None),
         "ActivityIntakeInML": hydration_dict.get('activityIntakeInML', None)
     }
-    if not all(value is None for value in data_fields.values()):
-        points_list.append({
-            "measurement":  "Hydration",
-            "time": datetime.strptime(date_str,"%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(), # Use GMT 00:00 for daily record
-            "tags": {
-                "Device": GARMIN_DEVICENAME,
-                "Database_Name": INFLUXDB_DATABASE
-            },
-            "fields": data_fields
-        })
+    points = build_daily_summary_point(
+        "Hydration", date_str, fields,
+        device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+    )
+    if points:
         logging.info(f"Success : Fetching Hydration data for date {date_str}")
-    return points_list
+    return points
 
 
 def get_solar_intensity(date_str):
