@@ -516,17 +516,11 @@ def get_intraday_hrv(date_str):
     hrv_list = (garmin_obj.get_hrv_data(date_str) or {}).get('hrvReadings') or []
     for entry in hrv_list:
         if entry.get('hrvValue'):
-            points_list.append({
-                    "measurement":  "HRV_Intraday",
-                    "time": pytz.timezone("UTC").localize(datetime.strptime(entry['readingTimeGMT'],"%Y-%m-%dT%H:%M:%S.%f")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {
-                        "hrvValue": entry.get('hrvValue')
-                    }
-                })
+            timestamp = pytz.timezone("UTC").localize(datetime.strptime(entry['readingTimeGMT'], "%Y-%m-%dT%H:%M:%S.%f"))
+            points_list.extend(build_timestamped_point(
+                "HRV_Intraday", timestamp, {"hrvValue": entry.get('hrvValue')},
+                device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+            ))
     if points_list:
         logging.info(f"Success : Fetching intraday HRV for date {date_str}")
     return points_list
