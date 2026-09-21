@@ -27,8 +27,41 @@
   "restingHeartRate": 52,
   "avgSkinTempDeviationC": -0.2,
   "avgSkinTempDeviationF": -0.36,
-  "sleepMovement": [],
-  "sleepLevels": [],
-  "sleepRestlessMoments": [],
-  "wellnessEpochSPO2DataDTOList": []
+  "sleepMovement": [
+    {"startGMT": "2026-01-15T02:30:00.0", "endGMT": "2026-01-15T02:35:00.0", "activityLevel": 2.5},
+    {"startGMT": "2026-01-15T02:35:00.0", "endGMT": "2026-01-15T02:40:00.0"}
+  ],
+  "sleepLevels": [
+    {"startGMT": "2026-01-15T02:30:00.0", "endGMT": "2026-01-15T03:00:00.0", "activityLevel": 1.0},
+    {"startGMT": "2026-01-15T03:00:00.0", "endGMT": "2026-01-15T03:30:00.0", "activityLevel": 0.0},
+    {"startGMT": "2026-01-15T03:30:00.0", "endGMT": "2026-01-15T04:00:00.0", "activityLevel": null}
+  ],
+  "sleepRestlessMoments": [
+    {"startGMT": 1768444800000, "value": 0},
+    {"startGMT": 1768445100000, "value": 3}
+  ],
+  "wellnessEpochSPO2DataDTOList": [
+    {"epochTimestamp": "2026-01-15T02:50:00.0", "spo2Reading": 0},
+    {"epochTimestamp": "2026-01-15T02:55:00.0", "spo2Reading": 95}
+  ],
+  "wellnessEpochRespirationDataDTOList": [
+    {"startTimeGMT": 1768446300000, "respirationValue": 0.0},
+    {"startTimeGMT": 1768446600000, "respirationValue": 13.5}
+  ],
+  "sleepHeartRate": [
+    {"startGMT": 1768446900000, "value": 0},
+    {"startGMT": 1768447200000, "value": 54}
+  ],
+  "sleepStress": [
+    {"startGMT": 1768447500000, "value": 0},
+    {"startGMT": 1768448100000, "value": 15}
+  ],
+  "sleepBodyBattery": [
+    {"startGMT": 1768448400000, "value": 0},
+    {"startGMT": 1768448700000, "value": 68}
+  ],
+  "hrvData": [
+    {"startGMT": 1768449000000, "value": 0.0},
+    {"startGMT": 1768449300000, "value": 42.5}
+  ]
 }

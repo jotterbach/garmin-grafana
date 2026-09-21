@@ -281,7 +281,7 @@ def get_sleep_data(date_str):
                     "Database_Name": INFLUXDB_DATABASE
                 },
                 "fields": {
-                    "SleepMovementActivityLevel": entry.get("activityLevel",-1),
+                    "SleepMovementActivityLevel": entry.get("activityLevel", -1.0),
                     "SleepMovementActivitySeconds": int((datetime.strptime(entry["endGMT"], "%Y-%m-%dT%H:%M:%S.%f") - datetime.strptime(entry["startGMT"], "%Y-%m-%dT%H:%M:%S.%f")).total_seconds())
                 }
             })
