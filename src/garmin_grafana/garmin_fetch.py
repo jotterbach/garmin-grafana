@@ -1330,28 +1330,21 @@ def get_race_predictions(date_str):
     return points
 
 def get_fitness_age(date_str):
-    points_list = []
     fitness_age = garmin_obj.get_fitnessage_data(date_str)
-
-    if fitness_age:
-            data_fields = {
-                "chronologicalAge": float(fitness_age.get("chronologicalAge")) if fitness_age.get("chronologicalAge") else None,
-                "fitnessAge": fitness_age.get("fitnessAge"),
-                "achievableFitnessAge": fitness_age.get("achievableFitnessAge"),
-            }
-
-            if not all(value is None for value in data_fields.values()):
-                points_list.append({
-                    "measurement": "FitnessAge",
-                    "time": datetime.strptime(date_str,"%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(), # Use GMT 00:00 for daily record
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": data_fields
-                })
-                logging.info(f"Success : Fetching Fitness Age for date {date_str}")
-    return points_list
+    if not fitness_age:
+        return []
+    fields = {
+        "chronologicalAge": float(fitness_age.get("chronologicalAge")) if fitness_age.get("chronologicalAge") else None,
+        "fitnessAge": fitness_age.get("fitnessAge"),
+        "achievableFitnessAge": fitness_age.get("achievableFitnessAge"),
+    }
+    points = build_daily_summary_point(
+        "FitnessAge", date_str, fields,
+        device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+    )
+    if points:
+        logging.info(f"Success : Fetching Fitness Age for date {date_str}")
+    return points
 
 def get_vo2_max(date_str):
     points_list = []
