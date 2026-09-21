@@ -142,6 +142,15 @@ class FakeGarmin:
     def get_lifestyle_logging_data(self, date_str):
         return self._daily["lifestyle"]
 
+    def get_hill_score(self, date_str):
+        return self._daily["hill_score"]
+
+    def get_endurance_score(self, date_str):
+        return self._daily["endurance_score"]
+
+    def get_hydration_data(self, date_str):
+        return self._daily["hydration"]
+
 
 @pytest.fixture
 def fake_garmin():
