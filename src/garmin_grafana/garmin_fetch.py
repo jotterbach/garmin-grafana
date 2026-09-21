@@ -1441,17 +1441,11 @@ def get_lifestyle_data(date_str):
                 "value": value
             }
 
-            points_list.append({
-                "measurement": "LifestyleJournal",
-                "time": pytz.timezone("UTC").localize(datetime.strptime(date_str, "%Y-%m-%d")).isoformat(),
-                "tags": {
-                    "Device": GARMIN_DEVICENAME,
-                    "Database_Name": INFLUXDB_DATABASE,
-                    "behavior": behavior_name,
-                    "category": category
-                },
-                "fields": fields
-            })
+            points_list.extend(build_daily_summary_point(
+                "LifestyleJournal", date_str, fields,
+                device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                extra_tags={"behavior": behavior_name, "category": category},
+            ))
             
         logging.info(f"Success : Fetching Lifestyle Journaling data for date {date_str}")
 
