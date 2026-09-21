@@ -1311,28 +1311,23 @@ def get_hillscore(date_str):
 
 # Contribution from PR #17 by @arturgoms 
 def get_race_predictions(date_str):
-    points_list = []
     rp_all_list = garmin_obj.get_race_predictions(startdate=date_str, enddate=date_str, _type="daily")
     rp_all = rp_all_list[0] if len(rp_all_list) > 0 else {}
-    if rp_all:
-        data_fields = {
-            "time5K": rp_all.get("time5K"),
-            "time10K": rp_all.get("time10K"),
-            "timeHalfMarathon": rp_all.get("timeHalfMarathon"),
-            "timeMarathon": rp_all.get("timeMarathon"),
-        }
-        if not all(value is None for value in data_fields.values()):
-            points_list.append({
-                "measurement":  "RacePredictions",
-                "time": datetime.strptime(date_str,"%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(), # Use GMT 00:00 for daily record
-                "tags": {
-                    "Device": GARMIN_DEVICENAME,
-                    "Database_Name": INFLUXDB_DATABASE
-                },
-                "fields": data_fields
-            })
-            logging.info(f"Success : Fetching Race Predictions for date {date_str}")
-    return points_list
+    if not rp_all:
+        return []
+    fields = {
+        "time5K": rp_all.get("time5K"),
+        "time10K": rp_all.get("time10K"),
+        "timeHalfMarathon": rp_all.get("timeHalfMarathon"),
+        "timeMarathon": rp_all.get("timeMarathon"),
+    }
+    points = build_daily_summary_point(
+        "RacePredictions", date_str, fields,
+        device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+    )
+    if points:
+        logging.info(f"Success : Fetching Race Predictions for date {date_str}")
+    return points
 
 def get_fitness_age(date_str):
     points_list = []
