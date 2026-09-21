@@ -38,6 +38,29 @@ def test_training_readiness_exact_point_shape(garmin_fetch_module):
     ]
 
 
+def test_training_status_exact_point_shape(garmin_fetch_module):
+    points = garmin_fetch_module.get_training_status(DATE_STR)
+    assert points == [
+        {
+            "measurement": "TrainingStatus",
+            "time": "2026-01-15T07:00:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {
+                "trainingStatus": 4,
+                "trainingStatusFeedbackPhrase": "PRODUCTIVE",
+                "weeklyTrainingLoad": 850,
+                "fitnessTrend": "MAINTAINING",
+                "acwrPercent": 105,
+                "dailyTrainingLoadAcute": 320,
+                "dailyTrainingLoadChronic": 280,
+                "maxTrainingLoadChronic": 400,
+                "minTrainingLoadChronic": 150,
+                "dailyAcuteChronicWorkloadRatio": 1.14,
+            },
+        }
+    ]
+
+
 def test_blood_pressure_exact_point_shape(garmin_fetch_module):
     """
     Post-migration point shape for get_blood_pressure, now routed through
