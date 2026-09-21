@@ -139,14 +139,8 @@ def get_daily_stats(date_str):
     points_list = []
     stats_json = garmin_obj.get_stats(date_str)
     if stats_json['wellnessStartTimeGmt'] and datetime.strptime(date_str, "%Y-%m-%d") < datetime.today():
-        points_list.append({
-            "measurement":  "DailyStats",
-            "time": pytz.timezone("UTC").localize(datetime.strptime(stats_json['wellnessStartTimeGmt'], "%Y-%m-%dT%H:%M:%S.%f")).isoformat(),
-            "tags": {
-                "Device": GARMIN_DEVICENAME,
-                "Database_Name": INFLUXDB_DATABASE
-            },
-            "fields": {
+        timestamp = pytz.timezone("UTC").localize(datetime.strptime(stats_json['wellnessStartTimeGmt'], "%Y-%m-%dT%H:%M:%S.%f"))
+        fields = {
                 "activeKilocalories": stats_json.get('activeKilocalories'),
                 "bmrKilocalories": stats_json.get('bmrKilocalories'),
 
@@ -201,7 +195,10 @@ def get_daily_stats(date_str):
                 "averageSpo2": stats_json.get("averageSpo2"),
                 "lowestSpo2": stats_json.get("lowestSpo2"),
             }
-        })
+        points_list = build_timestamped_point(
+            "DailyStats", timestamp, fields,
+            device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+        )
         if points_list:
             logging.info(f"Success : Fetching daily metrics for date {date_str}")
         return points_list
