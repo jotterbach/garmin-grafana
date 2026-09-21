@@ -258,3 +258,39 @@ def test_strength_hr_zones_exact_point_shape(garmin_fetch_module):
         }
         for zn, boundary in [(1, 95), (2, 130), (3, 150), (4, 165), (5, 178)]
     ]
+
+
+def test_purge_strength_exercise_sets_succeeds_on_v1(garmin_fetch_module):
+    """Default test env runs against a real InfluxDB 1.x -- deleting a
+    series that doesn't even exist yet is a harmless no-op success."""
+    assert garmin_fetch_module.INFLUXDB_VERSION == "1"
+    assert garmin_fetch_module.purge_existing_strength_exercise_sets(9876543211) is True
+
+
+def test_purge_strength_exercise_sets_skipped_on_non_v1(garmin_fetch_module):
+    """Non-v1 InfluxDB doesn't support series deletion -- the function
+    warns and returns True unconditionally (the caller then always
+    proceeds to write, accepting possible stale/duplicated rows)."""
+    original_version = garmin_fetch_module.INFLUXDB_VERSION
+    try:
+        garmin_fetch_module.INFLUXDB_VERSION = "3"
+        assert garmin_fetch_module.purge_existing_strength_exercise_sets(9876543211) is True
+    finally:
+        garmin_fetch_module.INFLUXDB_VERSION = original_version
+
+
+def test_purge_strength_exercise_sets_returns_false_on_delete_failure(garmin_fetch_module):
+    """If delete_series itself raises, the function logs a warning and
+    returns False, so the caller skips writing (rather than risking
+    stale + fresh rows coexisting)."""
+    from influxdb.exceptions import InfluxDBClientError
+
+    def _raise(*args, **kwargs):
+        raise InfluxDBClientError("simulated failure")
+
+    original_delete_series = garmin_fetch_module.INFLUXDB_STORAGE.delete_series
+    try:
+        garmin_fetch_module.INFLUXDB_STORAGE.delete_series = _raise
+        assert garmin_fetch_module.purge_existing_strength_exercise_sets(9876543211) is False
+    finally:
+        garmin_fetch_module.INFLUXDB_STORAGE.delete_series = original_delete_series
