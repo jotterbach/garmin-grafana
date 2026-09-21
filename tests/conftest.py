@@ -29,10 +29,12 @@ name from the project's own compose.yml defaults, so this can never be
 accidentally pointed at real ingested health data.
 """
 
+import io
 import json
 import os
 import sys
 import time
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -44,6 +46,44 @@ REPO_ROOT = Path(__file__).parent.parent
 SRC_PACKAGE_DIR = REPO_ROOT / "src" / "garmin_grafana"
 
 sys.path.insert(0, str(SRC_PACKAGE_DIR))
+
+# Real FIT files pulled from production via KEEP_FIT_FILES (see issue #26 /
+# the garmin_grafana_phase7_fit_plan memory) -- never committed (real
+# personal health data), so this directory won't exist in CI. Shared by
+# every test module that characterizes real-FIT-file parsing; each such
+# test skips cleanly when the corpus is absent.
+FIT_CORPUS_DIR = Path(
+    os.environ.get("FIT_TEST_CORPUS_DIR", "/ext/garmin-grafana/fit_filestore")
+)
+
+
+def real_fit_paths():
+    if not FIT_CORPUS_DIR.is_dir():
+        return []
+    return sorted(FIT_CORPUS_DIR.glob("*.fit"))
+
+
+class RealFitGarmin:
+    """
+    Minimal stand-in for garminconnect.Garmin wrapping one real local FIT
+    file, matching the existing MockGarminObject pattern in
+    fit_activity_importer.py: download_activity() zips the file in-memory
+    the same shape the real ORIGINAL-format download returns. Shared by
+    every test module that drives fetch_activity_GPS against a real file.
+    """
+
+    class ActivityDownloadFormat:
+        ORIGINAL = "original"
+        TCX = "tcx"
+
+    def __init__(self, fit_path: Path):
+        self._fit_path = fit_path
+
+    def download_activity(self, activity_id, dl_fmt=None):
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, mode="w") as zf:
+            zf.write(self._fit_path, arcname=self._fit_path.name)
+        return buf.getvalue()
 
 TEST_INFLUXDB_HOST = os.environ.get("TEST_INFLUXDB_HOST", "127.0.0.1")
 TEST_INFLUXDB_PORT = int(os.environ.get("TEST_INFLUXDB_PORT", "18086"))

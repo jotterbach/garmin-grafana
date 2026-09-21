@@ -6,7 +6,7 @@ import logging
 import hashlib
 import zipfile
 
-from fitparse import FitFile, FitParseError
+from fit_decoder import FitDecodeError, decode_fit
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any
 from pathlib import Path
@@ -18,27 +18,17 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def get_fit_activity_summary(fit_file: FitFile) -> List[Dict[str, Any]]:
+def get_fit_activity_summary(fit_messages: Dict[str, List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
     """
-    Extract an activity summary from a FIT file using session, activity, and file_id messages.
+    Extract an activity summary from decoded FIT messages using session,
+    activity, and file_id messages.
 
     This returns points that are formatted for the Garmin Grafana database.
     """
 
-    file_data = {}
-    session_data = {}
-    activity_data = {}
-
-    for msg in fit_file.get_messages():
-        if msg.name == "file_id":
-            for field in msg:
-                file_data[field.name] = field.value
-        elif msg.name == "session":
-            for field in msg:
-                session_data[field.name] = field.value
-        elif msg.name == "activity":
-            for field in msg:
-                activity_data[field.name] = field.value
+    file_data = (fit_messages.get("file_id_mesgs") or [{}])[0]
+    session_data = (fit_messages.get("session_mesgs") or [{}])[0]
+    activity_data = (fit_messages.get("activity_mesgs") or [{}])[0]
 
     # Create an actitivy id based on the md5sum hash of file metadata.
     serialized = json.dumps(
@@ -165,13 +155,12 @@ if __name__ == "__main__":
         raise FileNotFoundError(f"FIT file not found: {fit_path}")
 
     try:
-        fit_file = FitFile(str(fit_path))
-        fit_file.parse()
-    except FitParseError as e:
+        fit_messages = decode_fit(fit_path.read_bytes())
+    except FitDecodeError as e:
         raise RuntimeError(f"Failed to parse FIT file: {e}")
 
     activity_id, activity_type, start_point, end_point = get_fit_activity_summary(
-        fit_file
+        fit_messages
     )
 
     # Override the garmin_obj to return the fit file we want to import.

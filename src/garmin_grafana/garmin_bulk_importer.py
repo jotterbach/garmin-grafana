@@ -17,10 +17,9 @@ import argparse
 from typing import List
 from pathlib import Path
 from datetime import datetime, timezone
-from fitparse import FitFile, FitParseError
+from fit_decoder import FitDecodeError, decode_fit
 from collections import namedtuple
 from io import BytesIO
-from unittest import mock
 from enum import Enum
 
 import zipfile
@@ -297,12 +296,6 @@ class GarminBulkExport:
         Does not currently support monitoring messages, only activities.
         """
 
-        def get_fields(msg):
-            data = {}
-            for field in msg:
-                data[field.name] = field.value
-            return data
-
         zip_file_paths = [
             p
             for p in self.all_files
@@ -320,22 +313,19 @@ class GarminBulkExport:
                         logging.info(f"{i/len(namelist):.2%} .fit files processed ... ")
 
                     if filename.lower().endswith(".fit"):
-                        f = z.open(filename)
-                        try:
-                            fit_file = FitFile(f)
-                            fit_file.parse()
-                        except FitParseError as e:
-                            raise RuntimeError(f"Failed to parse FIT file: {e}")
+                        with z.open(filename) as f:
+                            try:
+                                fit_messages = decode_fit(f.read())
+                            except FitDecodeError as e:
+                                raise RuntimeError(f"Failed to parse FIT file: {e}")
 
                         session_sport = None
                         session_date = None
-                        for msg in fit_file.messages:
-                            if msg.name == "session":
-                                session_data = get_fields(msg)
-                                session_date = session_data["start_time"].replace(
-                                    tzinfo=timezone.utc
-                                )
-                                session_sport = session_data.get("sport", "Unknown")
+                        for session_data in fit_messages.get("session_mesgs") or []:
+                            session_date = session_data["start_time"].replace(
+                                tzinfo=timezone.utc
+                            )
+                            session_sport = session_data.get("sport", "Unknown")
 
                         if session_sport is not None and session_date is not None:
                             fit_file_index.append(
