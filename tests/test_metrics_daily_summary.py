@@ -32,3 +32,20 @@ def test_hillscore_exact_point_shape(garmin_fetch_module):
             },
         }
     ]
+
+
+def test_race_predictions_exact_point_shape(garmin_fetch_module):
+    points = garmin_fetch_module.get_race_predictions(DATE_STR)
+    assert points == [
+        {
+            "measurement": "RacePredictions",
+            "time": "2026-01-15T00:00:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {
+                "time5K": 1320,
+                "time10K": 2760,
+                "timeHalfMarathon": 6120,
+                "timeMarathon": 12900,
+            },
+        }
+    ]
