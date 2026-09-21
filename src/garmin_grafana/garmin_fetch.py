@@ -501,17 +501,11 @@ def get_intraday_br(date_str):
     br_list = garmin_obj.get_respiration_data(date_str).get('respirationValuesArray') or []
     for entry in br_list:
         if entry[1]:
-            points_list.append({
-                    "measurement":  "BreathingRateIntraday",
-                    "time": datetime.fromtimestamp(entry[0]/1000, tz=pytz.timezone("UTC")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {
-                        "BreathingRate": entry[1]
-                    }
-                })
+            timestamp = datetime.fromtimestamp(entry[0]/1000, tz=pytz.timezone("UTC"))
+            points_list.extend(build_timestamped_point(
+                "BreathingRateIntraday", timestamp, {"BreathingRate": entry[1]},
+                device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+            ))
     if points_list:
         logging.info(f"Success : Fetching intraday Breathing Rate for date {date_str}")
     return points_list
