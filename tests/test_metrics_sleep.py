@@ -46,3 +46,29 @@ def test_sleep_summary_exact_point_shape(garmin_fetch_module):
             },
         }
     ]
+
+
+def test_sleep_movement_exact_point_shape(garmin_fetch_module):
+    """No per-entry guard at all -- every entry unconditionally produces
+    a point. The second entry has no "activityLevel" key, exercising the
+    entry.get("activityLevel", -1.0) default (fixed from an int default
+    to a float one -- see the fixture-prep commit for why)."""
+    points = garmin_fetch_module.get_sleep_data(DATE_STR)
+    movement_points = [
+        p for p in points
+        if p["measurement"] == "SleepIntraday" and "SleepMovementActivityLevel" in p["fields"]
+    ]
+    assert movement_points == [
+        {
+            "measurement": "SleepIntraday",
+            "time": "2026-01-15T02:30:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"SleepMovementActivityLevel": 2.5, "SleepMovementActivitySeconds": 300},
+        },
+        {
+            "measurement": "SleepIntraday",
+            "time": "2026-01-15T02:35:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"SleepMovementActivityLevel": -1.0, "SleepMovementActivitySeconds": 300},
+        },
+    ]
