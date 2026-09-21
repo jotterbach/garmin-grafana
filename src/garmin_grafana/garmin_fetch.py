@@ -430,17 +430,11 @@ def get_intraday_hr(date_str):
     hr_list = garmin_obj.get_heart_rates(date_str).get("heartRateValues") or []
     for entry in hr_list:
         if entry[1]:
-            points_list.append({
-                    "measurement":  "HeartRateIntraday",
-                    "time": datetime.fromtimestamp(entry[0]/1000, tz=pytz.timezone("UTC")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {
-                        "HeartRate": entry[1]
-                    }
-                })
+            timestamp = datetime.fromtimestamp(entry[0]/1000, tz=pytz.timezone("UTC"))
+            points_list.extend(build_timestamped_point(
+                "HeartRateIntraday", timestamp, {"HeartRate": entry[1]},
+                device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+            ))
     if points_list:
         logging.info(f"Success : Fetching intraday Heart Rate for date {date_str}")
     return points_list
