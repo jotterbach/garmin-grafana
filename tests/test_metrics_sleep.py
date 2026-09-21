@@ -170,3 +170,36 @@ def test_sleep_hrv_exact_point_shape(garmin_fetch_module):
             "fields": {"hrvData": 42.5},
         },
     ]
+
+
+def test_sleep_levels_exact_point_shape(garmin_fetch_module):
+    """The highest-risk sub-shape: truthy-or-zero guard (issue #43: 0.0
+    is deep sleep, kept) PLUS a duplicate terminal point (issue #127)
+    appended after the loop, using Python's leaked loop variable (the
+    *last* entry), guarded only by endGMT truthiness -- NOT by the
+    per-entry activityLevel guard. The fixture's last entry has
+    activityLevel: null (dropped by the per-entry guard, so no regular
+    point for it) but a valid endGMT, so the duplicate point still fires
+    with a None field -- this exact quirk is preserved, not "fixed"."""
+    points = garmin_fetch_module.get_sleep_data(DATE_STR)
+    level_points = [p for p in points if "SleepStageLevel" in p["fields"]]
+    assert level_points == [
+        {
+            "measurement": "SleepIntraday",
+            "time": "2026-01-15T02:30:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"SleepStageLevel": 1.0, "SleepStageSeconds": 1800},
+        },
+        {
+            "measurement": "SleepIntraday",
+            "time": "2026-01-15T03:00:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"SleepStageLevel": 0.0, "SleepStageSeconds": 1800},
+        },
+        {
+            "measurement": "SleepIntraday",
+            "time": "2026-01-15T04:00:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"SleepStageLevel": None},
+        },
+    ]
