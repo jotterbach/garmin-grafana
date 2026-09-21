@@ -11,7 +11,7 @@ on:
       - 'src/garmin_grafana/garmin_bulk_importer.py'
       - 'src/garmin_grafana/fit_activity_importer.py'
       - 'src/garmin_grafana/__init__.py'
-      - 'compose-example.yml'
+      - 'compose.yml'
       - 'pyproject.toml'
       - 'Dockerfile'
       - '.python-version'
