@@ -2,7 +2,7 @@
 import traceback
 import re
 import requests, time, pytz, logging, os, sys, dotenv, io, zipfile
-from fitparse import FitFile, FitParseError
+from fit_decoder import FitDecodeError, decode_fit
 from datetime import datetime, timedelta
 from influxdb.exceptions import InfluxDBClientError
 from influxdb_client_3 import InfluxDBError
@@ -752,7 +752,7 @@ def _build_cycling_dynamics_point(all_records_list, all_sessions_list, activityI
                 fields[dst] = float(v)
 
         # Power phase tuples — Garmin Vector/Rally exclusive
-        # fitparse returns avg_left_power_phase as (start, end, ...) in degrees
+        # avg_left_power_phase comes back as (start, end, ...) in degrees
         for field_key, idx, dst in [
             ('avg_left_power_phase',       0, 'avg_left_power_phase_start'),
             ('avg_left_power_phase',       1, 'avg_left_power_phase_end'),
@@ -858,13 +858,11 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                     raise FileNotFoundError(f"No FIT file found in the downloaded zip archive for Activity ID {activityID}")
                 else:
                     fit_data = zip_ref.read(fit_filename)
-                    fit_file_buffer = io.BytesIO(fit_data)
-                    fitfile = FitFile(fit_file_buffer)
-                    fitfile.parse()
-                    all_records_list = [record.get_values() for record in fitfile.get_messages('record')]
-                    all_sessions_list = [record.get_values() for record in fitfile.get_messages('session')]
-                    all_lengths_list = [record.get_values() for record in fitfile.get_messages('length')]
-                    all_laps_list = [record.get_values() for record in fitfile.get_messages('lap')]
+                    fit_messages = decode_fit(fit_data)
+                    all_records_list = fit_messages.get('record_mesgs', [])
+                    all_sessions_list = fit_messages.get('session_mesgs', [])
+                    all_lengths_list = fit_messages.get('length_mesgs', [])
+                    all_laps_list = fit_messages.get('lap_mesgs', [])
                     if len(all_records_list) == 0:
                         raise FileNotFoundError(f"No records found in FIT file for Activity ID {activityID} - Discarding FIT file")
                     else:
@@ -890,8 +888,8 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                                     "DurationSeconds": (parsed_record['timestamp'].replace(tzinfo=pytz.UTC) - activity_start_time).total_seconds(),
                                     "HeartRate": float(parsed_record.get('heart_rate', None)) if parsed_record.get('heart_rate', None) else None,
                                     "Speed": parsed_record.get('enhanced_speed', None) or parsed_record.get('speed', None),
-                                    "GradeAdjustedSpeed": (parsed_record.get("unknown_140") / 1000.0) if parsed_record.get("unknown_140") else None,
-                                    "RunningEfficiency": ((parsed_record.get("unknown_140") / 1000.0)/parsed_record.get('heart_rate')) if (parsed_record.get("unknown_140") and parsed_record.get('heart_rate')) else None,
+                                    "GradeAdjustedSpeed": (parsed_record.get(140) / 1000.0) if parsed_record.get(140) else None,
+                                    "RunningEfficiency": ((parsed_record.get(140) / 1000.0)/parsed_record.get('heart_rate')) if (parsed_record.get(140) and parsed_record.get('heart_rate')) else None,
                                     "Cadence": parsed_record.get('cadence', None),
                                     "Fractional_Cadence": parsed_record.get('fractional_cadence', None),
                                     "Temperature": parsed_record.get('temperature', None),
@@ -1013,7 +1011,7 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                         with open(fit_path, "wb") as f:
                             f.write(fit_data)
                         logging.info(f"Success : Activity ID {activityID} stored in output file {fit_path}")
-        except (FileNotFoundError, FitParseError) as err:
+        except (FileNotFoundError, FitDecodeError) as err:
             logging.error(err)
             logging.warning(f"Fallback : Failed to use FIT file for activityID {activityID} - Trying TCX file...")
             
