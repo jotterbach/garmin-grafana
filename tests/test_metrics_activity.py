@@ -166,3 +166,66 @@ def test_activity_summary_exact_point_shape(garmin_fetch_module):
             },
         },
     ]
+
+
+STRENGTH_ACTIVITY_ID_DICT = {
+    9876543211: {
+        "typeKey": "strength_training",
+        "startTimeGMT": "2026-01-15 18:00:00",
+        "activityName": "Evening Strength Session",
+    }
+}
+
+
+def test_strength_exercise_set_exact_point_shape(garmin_fetch_module):
+    """The exercise_sets.json fixture has 3 entries: an ACTIVE set with a
+    real startTime, a REST set (must be skipped, and must NOT increment
+    the running set_counter used as a fallback SetOrder/timestamp for
+    later entries), and a second ACTIVE set with no startTime (falls back
+    to activity_start_time + set_counter seconds)."""
+    points = garmin_fetch_module.get_strength_training_data(STRENGTH_ACTIVITY_ID_DICT)
+    exercise_points = [p for p in points if p["measurement"] == "StrengthExerciseSet"]
+    assert exercise_points == [
+        {
+            "measurement": "StrengthExerciseSet",
+            "time": "2026-01-15T18:05:00+00:00",
+            "tags": {
+                "Device": "TestDevice",
+                "Database_Name": "SmokeTestDB",
+                "ActivityID": 9876543211,
+                "ActivitySelector": "20260115T180000UTC-strength_training",
+                "ExerciseCategory": "BENCH_PRESS",
+                "ExerciseLabel": "BENCH_PRESS/BARBELL_BENCH_PRESS",
+            },
+            "fields": {
+                "Activity_ID": 9876543211,
+                "ActivityName": "Evening Strength Session",
+                "SetOrder": 1,
+                "SetType": "ACTIVE",
+                "Reps": 10,
+                "Weight_kg": 60.0,
+                "Duration_s": 45.0,
+            },
+        },
+        {
+            "measurement": "StrengthExerciseSet",
+            "time": "2026-01-15T18:00:02+00:00",
+            "tags": {
+                "Device": "TestDevice",
+                "Database_Name": "SmokeTestDB",
+                "ActivityID": 9876543211,
+                "ActivitySelector": "20260115T180000UTC-strength_training",
+                "ExerciseCategory": "BENCH_PRESS",
+                "ExerciseLabel": "BENCH_PRESS/BARBELL_BENCH_PRESS",
+            },
+            "fields": {
+                "Activity_ID": 9876543211,
+                "ActivityName": "Evening Strength Session",
+                "SetOrder": 3,
+                "SetType": "ACTIVE",
+                "Reps": 8,
+                "Weight_kg": 65.0,
+                "Duration_s": 40.0,
+            },
+        },
+    ]
