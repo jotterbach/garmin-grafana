@@ -1347,24 +1347,27 @@ def get_fitness_age(date_str):
     return points
 
 def get_vo2_max(date_str):
-    points_list = []
     max_metrics = garmin_obj.get_max_metrics(date_str)
     try:
-        if max_metrics:
-            vo2_max_value = (max_metrics[0].get("generic") or {}).get("vo2MaxPreciseValue", None)
-            vo2_max_value_cycling = (max_metrics[0].get("cycling") or {}).get("vo2MaxPreciseValue", None)
-            if vo2_max_value or vo2_max_value_cycling:
-                points_list.append({
-                    "measurement":  "VO2_Max",
-                    "time": datetime.strptime(date_str,"%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(), # Use GMT 00:00 for daily record
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {"VO2_max_value" : vo2_max_value, "VO2_max_value_cycling" : vo2_max_value_cycling}
-                })
-                logging.info(f"Success : Fetching VO2-max for date {date_str}")
-        return points_list
+        if not max_metrics:
+            return []
+        vo2_max_value = (max_metrics[0].get("generic") or {}).get("vo2MaxPreciseValue", None)
+        vo2_max_value_cycling = (max_metrics[0].get("cycling") or {}).get("vo2MaxPreciseValue", None)
+        # Truthy check, not an is-None check like the other single-daily-
+        # point functions -- a value of 0 must still count as "no data",
+        # preserved exactly rather than folded into build_daily_summary_point's
+        # own (different) guard. See tests/test_metrics_daily_summary.py's
+        # test_vo2_max_zero_value_is_treated_as_no_data.
+        if not (vo2_max_value or vo2_max_value_cycling):
+            return []
+        fields = {"VO2_max_value": vo2_max_value, "VO2_max_value_cycling": vo2_max_value_cycling}
+        points = build_daily_summary_point(
+            "VO2_Max", date_str, fields,
+            device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+        )
+        if points:
+            logging.info(f"Success : Fetching VO2-max for date {date_str}")
+        return points
     except AttributeError as err:
         return []
 
