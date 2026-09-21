@@ -8,13 +8,13 @@ from influxdb.exceptions import InfluxDBClientError
 from influxdb_client_3 import InfluxDBError
 import xml.etree.ElementTree as ET
 from garminconnect import (
-    Garmin,
     GarminConnectAuthenticationError,
     GarminConnectConnectionError,
     GarminConnectTooManyRequestsError,
 )
 from config import Config
 from influx_storage import InfluxStorage
+from garmin_client import garmin_login
 garmin_obj = None
 banner_text = """
 
@@ -50,10 +50,6 @@ INFLUXDB_DATABASE = CONFIG.influxdb_database
 INFLUXDB_V3_ACCESS_TOKEN = CONFIG.influxdb_v3_access_token
 INFLUXDB_ORG = CONFIG.influxdb_org
 INFLUXDB_ENDPOINT_IS_HTTP = CONFIG.influxdb_endpoint_is_http
-TOKEN_DIR = CONFIG.token_dir
-GARMINCONNECT_EMAIL = CONFIG.garminconnect_email
-GARMINCONNECT_PASSWORD = CONFIG.garminconnect_password
-GARMINCONNECT_IS_CN = CONFIG.garminconnect_is_cn
 # GARMIN_DEVICENAME / GARMIN_DEVICEID are reassigned at runtime by
 # get_last_sync() (via `global`) once auto-detection resolves the real
 # device -- these are just their initial values from config, not read back
@@ -117,52 +113,6 @@ def iter_days(start_date: str, end_date: str):
 
 
 # %%
-def garmin_login():
-    token_store_expanded = os.path.expanduser(TOKEN_DIR)
-    token_store = token_store_expanded
-    if os.path.isfile(token_store_expanded) and (not token_store_expanded.endswith('.json')):
-        # New native client treats non-.json token paths as directories.
-        # If a legacy file exists at this path, use a dedicated directory instead.
-        token_store = token_store_expanded + "_tokens"
-        logging.warning(
-            "TOKEN_DIR points to an existing file (%s). Using '%s' for native token storage compatibility",
-            token_store_expanded,
-            token_store,
-        )
-
-    try:
-        logging.info(f"Trying to login to Garmin Connect using token data from '{token_store}'...")
-        garmin = Garmin()
-        garmin.login(token_store)
-        logging.info("Login to Garmin Connect successful using stored session tokens.")
-
-    except (FileNotFoundError, GarminConnectAuthenticationError, GarminConnectConnectionError):
-        logging.warning("Session is expired or login information not present/incorrect. You'll need to log in again...login with your Garmin Connect credentials to generate them.")
-        try:
-            user_email = (GARMINCONNECT_EMAIL or "").strip() or input("Enter Garminconnect Login e-mail: ").strip()
-            user_password = (GARMINCONNECT_PASSWORD or "").strip() or input("Enter Garminconnect password (characters will be visible): ").strip()
-            garmin = Garmin(
-                email=user_email, password=user_password, is_cn=GARMINCONNECT_IS_CN,
-                prompt_mfa=lambda: input("MFA one-time code (via email or SMS): ").strip(),
-            )
-            garmin.login(token_store)
-
-            logging.info(f"Oauth tokens stored in '{token_store}' for future use")
-            logging.info("login to Garmin Connect successful using credentials and MFA (if enabled). Continuing with current run")
-
-        except (
-            FileNotFoundError,
-            GarminConnectConnectionError,
-            GarminConnectAuthenticationError,
-            GarminConnectTooManyRequestsError,
-            requests.exceptions.HTTPError,
-        ) as err:
-            logging.error(str(err))
-            raise Exception("Garmin login failed after credential/MFA attempt")
-
-    return garmin
-
-
 def _is_http_status_error(err, status_code):
     """Best-effort status matching for wrapped Garmin errors in different module versions."""
     if hasattr(err, "response") and getattr(err.response, "status_code", None) == status_code:
@@ -1721,7 +1671,7 @@ def fetch_write_bulk(start_date_str, end_date_str):
             except GarminConnectAuthenticationError as err:
                 logging.error(err)
                 logging.info(f"Authentication Failed : Retrying login with given credentials (won't work automatically for MFA/2FA enabled accounts)")
-                garmin_obj = garmin_login()
+                garmin_obj = garmin_login(CONFIG)
                 time.sleep(5)
                 repeat_loop = True
             except Exception as err:
@@ -1744,7 +1694,7 @@ if __name__ == "__main__":
         logging.error("Unable to connect with influxdb database! Aborted")
         raise
 
-    garmin_obj = garmin_login()
+    garmin_obj = garmin_login(CONFIG)
 
     # %%
     if MANUAL_START_DATE:
