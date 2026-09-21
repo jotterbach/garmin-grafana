@@ -270,18 +270,15 @@ def get_sleep_data(date_str):
     sleep_movement_intraday = all_sleep_data.get("sleepMovement")
     if sleep_movement_intraday:
         for entry in sleep_movement_intraday:
-            points_list.append({
-                "measurement":  "SleepIntraday",
-                "time": pytz.timezone("UTC").localize(datetime.strptime(entry["startGMT"], "%Y-%m-%dT%H:%M:%S.%f")).isoformat(),
-                "tags": {
-                    "Device": GARMIN_DEVICENAME,
-                    "Database_Name": INFLUXDB_DATABASE
-                },
-                "fields": {
-                    "SleepMovementActivityLevel": entry.get("activityLevel", -1.0),
-                    "SleepMovementActivitySeconds": int((datetime.strptime(entry["endGMT"], "%Y-%m-%dT%H:%M:%S.%f") - datetime.strptime(entry["startGMT"], "%Y-%m-%dT%H:%M:%S.%f")).total_seconds())
-                }
-            })
+            timestamp = pytz.timezone("UTC").localize(datetime.strptime(entry["startGMT"], "%Y-%m-%dT%H:%M:%S.%f"))
+            fields = {
+                "SleepMovementActivityLevel": entry.get("activityLevel", -1.0),
+                "SleepMovementActivitySeconds": int((datetime.strptime(entry["endGMT"], "%Y-%m-%dT%H:%M:%S.%f") - datetime.strptime(entry["startGMT"], "%Y-%m-%dT%H:%M:%S.%f")).total_seconds())
+            }
+            points_list.extend(build_timestamped_point(
+                "SleepIntraday", timestamp, fields,
+                device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+            ))
     sleep_levels_intraday = all_sleep_data.get("sleepLevels")
     if sleep_levels_intraday:
         for entry in sleep_levels_intraday:
