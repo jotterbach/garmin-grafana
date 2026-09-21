@@ -100,6 +100,7 @@ class FakeGarmin:
         self._activities = _load_fixture("activities.json")
         self._sleep = _load_fixture("sleep.json")
         self._daily = _load_fixture("daily_metrics.json")
+        self._device_sync = _load_fixture("device_sync.json")
 
     def get_stats(self, date_str):
         return self._daily["daily_stats"]
@@ -166,6 +167,9 @@ class FakeGarmin:
 
     def connectapi(self, endpoint, method="GET"):
         return [self._daily["lactate_threshold_value"]]
+
+    def get_device_last_used(self):
+        return self._device_sync
 
 
 @pytest.fixture
