@@ -8,11 +8,9 @@ Each test is written and confirmed passing against the *current*
 (pre-migration) implementation first, then must keep passing unchanged
 after that function is refactored -- except where a function's migration
 involves a disclosed behavioral change (see test_blood_pressure_exact_point_shape's
-docstring), in which case the test is updated to match the new, understood
-behavior rather than kept red.
+and test_solar_intensity_exact_point_shape's docstrings), in which case the
+test is updated to match the new, understood behavior rather than kept red.
 """
-
-from datetime import datetime
 
 DATE_STR = "2026-01-15"
 
@@ -63,23 +61,22 @@ def test_training_status_exact_point_shape(garmin_fetch_module):
     ]
 
 
-def test_solar_intensity_exact_point_shape_before_refactor(garmin_fetch_module):
+def test_solar_intensity_exact_point_shape(garmin_fetch_module):
     """
-    Captures get_solar_intensity's CURRENT exact behavior. Same
-    raw-datetime-object "time" inconsistency as get_blood_pressure's
-    pre-refactor code (no .isoformat() call) -- see that function's
-    now-updated test for the full rationale. This test documents that
-    baseline; it is deliberately superseded once the refactor lands (see
-    test_solar_intensity_exact_point_shape below), the same way
-    get_blood_pressure's before/after pair was handled.
+    Post-migration point shape for get_solar_intensity, now routed through
+    build_timestamped_point. Same disclosed raw-datetime -> isoformat-string
+    normalization as get_blood_pressure's migration -- see that function's
+    test docstring for the full rationale.
     """
     points = garmin_fetch_module.get_solar_intensity(DATE_STR)
-    assert len(points) == 1
-    point = points[0]
-    assert point["measurement"] == "SolarIntensity"
-    assert isinstance(point["time"], datetime)  # not a string, today
-    assert point["tags"] == {"Device": "TestDevice", "Database_Name": "SmokeTestDB"}
-    assert point["fields"] == {"solarUtilization": 45, "activityTimeGainMs": 1200}
+    assert points == [
+        {
+            "measurement": "SolarIntensity",
+            "time": "2026-01-15T06:30:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"solarUtilization": 45, "activityTimeGainMs": 1200},
+        }
+    ]
 
 
 def test_blood_pressure_exact_point_shape(garmin_fetch_module):

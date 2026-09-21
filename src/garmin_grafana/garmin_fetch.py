@@ -1441,15 +1441,11 @@ def get_solar_intensity(date_str):
                 'activityTimeGainMs': si_measurement.get('activityTimeGainMs', None),
             }
             if not all(value is None for value in data_fields.values()) and 'readingTimestampGmt' in si_measurement:
-                points_list.append({
-                    "measurement":  "SolarIntensity",
-                    "time": pytz.UTC.localize(datetime.strptime(si_measurement['readingTimestampGmt'], '%Y-%m-%dT%H:%M:%S.%f')),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": data_fields
-                })
+                timestamp = pytz.UTC.localize(datetime.strptime(si_measurement['readingTimestampGmt'], '%Y-%m-%dT%H:%M:%S.%f'))
+                points_list.extend(build_timestamped_point(
+                    "SolarIntensity", timestamp, data_fields,
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                ))
         logging.info(f"Success : Fetching Solar Intensity data for date {date_str}")
     if len(points_list) == 0:
         logging.warning(f"No Solar Intensity data available for date {date_str}")
