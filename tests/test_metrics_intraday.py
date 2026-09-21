@@ -67,3 +67,23 @@ def test_intraday_hrv_exact_point_shape(garmin_fetch_module):
             "fields": {"hrvValue": 45},
         },
     ]
+
+
+def test_intraday_steps_exact_point_shape(garmin_fetch_module):
+    """Unlike hr/br/hrv, this guard is truthy-or-zero -- a 0 steps
+    reading is kept, not dropped."""
+    points = garmin_fetch_module.get_intraday_steps(DATE_STR)
+    assert points == [
+        {
+            "measurement": "StepsIntraday",
+            "time": "2026-01-15T06:00:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"StepsCount": 320},
+        },
+        {
+            "measurement": "StepsIntraday",
+            "time": "2026-01-15T06:15:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"StepsCount": 0},
+        },
+    ]
