@@ -216,18 +216,11 @@ def get_last_sync():
     if GARMIN_DEVICENAME_AUTOMATIC:
         GARMIN_DEVICENAME = sync_data.get('lastUsedDeviceName') or "Unknown"
         GARMIN_DEVICEID = sync_data.get('userDeviceId') or None
-    points_list.append({
-        "measurement":  "DeviceSync",
-        "time": datetime.fromtimestamp(sync_data['lastUsedDeviceUploadTime']/1000, tz=pytz.timezone("UTC")).isoformat(),
-        "tags": {
-            "Device": GARMIN_DEVICENAME,
-            "Database_Name": INFLUXDB_DATABASE
-        },
-        "fields": {
-            "imageUrl": sync_data.get('imageUrl'),
-            "Device_Name": GARMIN_DEVICENAME
-        }
-    })
+    timestamp = datetime.fromtimestamp(sync_data['lastUsedDeviceUploadTime']/1000, tz=pytz.timezone("UTC"))
+    points_list.extend(build_timestamped_point(
+        "DeviceSync", timestamp, {"imageUrl": sync_data.get('imageUrl'), "Device_Name": GARMIN_DEVICENAME},
+        device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+    ))
     if points_list:
         logging.info(f"Success : Updated device last sync time")
     else:
