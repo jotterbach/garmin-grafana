@@ -49,3 +49,19 @@ def test_race_predictions_exact_point_shape(garmin_fetch_module):
             },
         }
     ]
+
+
+def test_fitness_age_exact_point_shape(garmin_fetch_module):
+    points = garmin_fetch_module.get_fitness_age(DATE_STR)
+    assert points == [
+        {
+            "measurement": "FitnessAge",
+            "time": "2026-01-15T00:00:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {
+                "chronologicalAge": 32.0,
+                "fitnessAge": 27,
+                "achievableFitnessAge": 24,
+            },
+        }
+    ]
