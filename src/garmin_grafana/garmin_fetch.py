@@ -15,6 +15,7 @@ from garminconnect import (
 from config import Config
 from influx_storage import InfluxStorage
 from garmin_client import garmin_login
+from metric_points import build_daily_summary_point
 garmin_obj = None
 banner_text = """
 
@@ -1289,29 +1290,24 @@ def get_training_readiness(date_str):
 
 # Contribution from PR #17 by @arturgoms 
 def get_hillscore(date_str):
-    points_list = []
     hill = garmin_obj.get_hill_score(date_str)
-    if hill:
-        data_fields = {
-            "strengthScore": hill.get("strengthScore"),
-            "enduranceScore": hill.get("enduranceScore"),
-            "hillScoreClassificationId": hill.get("hillScoreClassificationId"),
-            "overallScore": hill.get("overallScore"),
-            "hillScoreFeedbackPhraseId": hill.get("hillScoreFeedbackPhraseId"),
-            "vo2MaxPreciseValue": hill.get("vo2MaxPreciseValue")
-        }
-        if not all(value is None for value in data_fields.values()):
-            points_list.append({
-                "measurement":  "HillScore",
-                "time": datetime.strptime(date_str,"%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(), # Use GMT 00:00 for daily record
-                "tags": {
-                    "Device": GARMIN_DEVICENAME,
-                    "Database_Name": INFLUXDB_DATABASE
-                },
-                "fields": data_fields
-            })
-            logging.info(f"Success : Fetching Hill Score for date {date_str}")
-    return points_list
+    if not hill:
+        return []
+    fields = {
+        "strengthScore": hill.get("strengthScore"),
+        "enduranceScore": hill.get("enduranceScore"),
+        "hillScoreClassificationId": hill.get("hillScoreClassificationId"),
+        "overallScore": hill.get("overallScore"),
+        "hillScoreFeedbackPhraseId": hill.get("hillScoreFeedbackPhraseId"),
+        "vo2MaxPreciseValue": hill.get("vo2MaxPreciseValue")
+    }
+    points = build_daily_summary_point(
+        "HillScore", date_str, fields,
+        device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+    )
+    if points:
+        logging.info(f"Success : Fetching Hill Score for date {date_str}")
+    return points
 
 # Contribution from PR #17 by @arturgoms 
 def get_race_predictions(date_str):
