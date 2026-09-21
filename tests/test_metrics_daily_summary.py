@@ -23,8 +23,8 @@ def test_hillscore_exact_point_shape(garmin_fetch_module):
             "time": "2026-01-15T00:00:00+00:00",
             "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
             "fields": {
-                "strengthScore": 6.5,
-                "enduranceScore": 7.2,
+                "strengthScore": 46,
+                "enduranceScore": 47,
                 "hillScoreClassificationId": 3,
                 "overallScore": 68,
                 "hillScoreFeedbackPhraseId": 12,
@@ -124,10 +124,10 @@ def test_hydration_exact_point_shape(garmin_fetch_module):
             "time": "2026-01-15T00:00:00+00:00",
             "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
             "fields": {
-                "ValueInML": 1800,
-                "SweatLossInML": 450,
-                "GoalInML": 3000,
-                "ActivityIntakeInML": 200,
+                "ValueInML": 1800.0,
+                "SweatLossInML": 450.0,
+                "GoalInML": 3000.0,
+                "ActivityIntakeInML": 200.0,
             },
         }
     ]

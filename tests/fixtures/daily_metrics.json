@@ -92,8 +92,8 @@
     {"zoneNumber": 5, "zoneLowBoundary": 178}
   ],
   "hill_score": {
-    "strengthScore": 6.5,
-    "enduranceScore": 7.2,
+    "strengthScore": 46,
+    "enduranceScore": 47,
     "hillScoreClassificationId": 3,
     "overallScore": 68,
     "hillScoreFeedbackPhraseId": 12,
@@ -103,9 +103,9 @@
     "overallScore": 412
   },
   "hydration": {
-    "valueInML": 1800,
-    "sweatLossInML": 450,
-    "goalInML": 3000,
-    "activityIntakeInML": 200
+    "valueInML": 1800.0,
+    "sweatLossInML": 450.0,
+    "goalInML": 3000.0,
+    "activityIntakeInML": 200.0
   }
 }
