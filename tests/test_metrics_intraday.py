@@ -37,3 +37,21 @@ def test_intraday_hr_exact_point_shape(garmin_fetch_module):
             "fields": {"HeartRate": 61},
         },
     ]
+
+
+def test_intraday_br_exact_point_shape(garmin_fetch_module):
+    points = garmin_fetch_module.get_intraday_br(DATE_STR)
+    assert points == [
+        {
+            "measurement": "BreathingRateIntraday",
+            "time": "2026-01-15T07:00:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"BreathingRate": 14.0},
+        },
+        {
+            "measurement": "BreathingRateIntraday",
+            "time": "2026-01-15T07:05:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"BreathingRate": 14.5},
+        },
+    ]
