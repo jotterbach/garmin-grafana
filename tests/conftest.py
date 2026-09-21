@@ -101,6 +101,7 @@ class FakeGarmin:
         self._sleep = _load_fixture("sleep.json")
         self._daily = _load_fixture("daily_metrics.json")
         self._device_sync = _load_fixture("device_sync.json")
+        self._exercise_sets = _load_fixture("exercise_sets.json")
 
     def get_stats(self, date_str):
         return self._daily["daily_stats"]
@@ -170,6 +171,9 @@ class FakeGarmin:
 
     def get_device_last_used(self):
         return self._device_sync
+
+    def get_activity_exercise_sets(self, activity_id):
+        return self._exercise_sets
 
 
 @pytest.fixture

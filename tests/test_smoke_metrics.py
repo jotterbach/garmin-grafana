@@ -72,12 +72,14 @@ def test_vo2_max(garmin_fetch_module):
 def test_activity_summary(garmin_fetch_module):
     points, gps_ids, strength_ids = garmin_fetch_module.get_activity_summary(DATE_STR)
     assert _measurements(points) == {"ActivitySummary"}
-    # both fixture activities are GPS-less running activities: no FIT
-    # download/parsing should be triggered by this smoke test.
+    # Both fixture activities (a running activity and a strength activity)
+    # are GPS-less: no FIT download/parsing should be triggered by this
+    # smoke test. The strength activity is collected into strength_ids for
+    # get_strength_training_data to pick up separately.
     assert gps_ids == {}
-    assert strength_ids == {}
+    assert strength_ids.keys() == {9876543211}
     tagged_ids = {p["tags"]["ActivityID"] for p in points}
-    assert tagged_ids == {9876543210}
+    assert tagged_ids == {9876543210, 9876543211}
 
 
 def test_race_predictions(garmin_fetch_module):

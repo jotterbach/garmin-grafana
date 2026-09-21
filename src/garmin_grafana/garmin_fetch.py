@@ -519,16 +519,12 @@ def get_activity_summary(date_str):
             else:
                 logging.warning(f"No HR zone data found for activity: {activity_id}")
 
-            points_list.append({
-                "measurement":  "ActivitySummary",
-                "time": datetime.strptime(activity["startTimeGMT"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.UTC).isoformat(),
-                "tags": {
-                    "Device": GARMIN_DEVICENAME,
-                    "Database_Name": INFLUXDB_DATABASE,
-                    "ActivityID": activity.get('activityId'),
-                    "ActivitySelector": datetime.strptime(activity["startTimeGMT"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.UTC).strftime('%Y%m%dT%H%M%SUTC-') + (activity.get('activityType') or {}).get('typeKey', "Unknown")
-                },
-                "fields": {
+            activity_start_time = datetime.strptime(activity["startTimeGMT"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.UTC)
+            activity_selector = activity_start_time.strftime('%Y%m%dT%H%M%SUTC-') + (activity.get('activityType') or {}).get('typeKey', "Unknown")
+            extra_tags = {"ActivityID": activity.get('activityId'), "ActivitySelector": activity_selector}
+
+            points_list.extend(build_timestamped_point(
+                "ActivitySummary", activity_start_time, {
                     "Activity_ID": activity_id,
                     'Device_ID': activity.get('deviceId'),
                     'activityName': activity.get('activityName'),
@@ -548,11 +544,11 @@ def get_activity_summary(date_str):
                     'vO2MaxValue': activity.get('vO2MaxValue'),
                     'locationName': activity.get('locationName'),
                     'lapCount': activity.get('lapCount'),
-                    'hrTimeInZone_1': int(val) if (val := activity.get('hrTimeInZone_1')) is not None else None,
-                    'hrTimeInZone_2': int(val) if (val := activity.get('hrTimeInZone_2')) is not None else None,
-                    'hrTimeInZone_3': int(val) if (val := activity.get('hrTimeInZone_3')) is not None else None,
-                    'hrTimeInZone_4': int(val) if (val := activity.get('hrTimeInZone_4')) is not None else None,
-                    'hrTimeInZone_5': int(val) if (val := activity.get('hrTimeInZone_5')) is not None else None,
+                    'hrTimeInZone_1': float(val) if (val := activity.get('hrTimeInZone_1')) is not None else None,
+                    'hrTimeInZone_2': float(val) if (val := activity.get('hrTimeInZone_2')) is not None else None,
+                    'hrTimeInZone_3': float(val) if (val := activity.get('hrTimeInZone_3')) is not None else None,
+                    'hrTimeInZone_4': float(val) if (val := activity.get('hrTimeInZone_4')) is not None else None,
+                    'hrTimeInZone_5': float(val) if (val := activity.get('hrTimeInZone_5')) is not None else None,
                     'hrZoneLowBoundary_1': hr_zone_boundaries[0],
                     'hrZoneLowBoundary_2': hr_zone_boundaries[1],
                     'hrZoneLowBoundary_3': hr_zone_boundaries[2],
@@ -563,24 +559,19 @@ def get_activity_summary(date_str):
                     'activityTrainingLoad': activity.get('activityTrainingLoad'),
                     'moderateIntensityMinutes': activity.get('moderateIntensityMinutes'),
                     'vigorousIntensityMinutes': activity.get('vigorousIntensityMinutes'),
-                }
-            })
-            points_list.append({
-                "measurement":  "ActivitySummary",
-                "time": (datetime.strptime(activity["startTimeGMT"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.UTC) + timedelta(seconds=int(activity.get('elapsedDuration', activity.get('duration', 0))))).isoformat(),
-                "tags": {
-                    "Device": GARMIN_DEVICENAME,
-                    "Database_Name": INFLUXDB_DATABASE,
-                    "ActivityID": activity.get('activityId'),
-                    "ActivitySelector": datetime.strptime(activity["startTimeGMT"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.UTC).strftime('%Y%m%dT%H%M%SUTC-') + (activity.get('activityType') or {}).get('typeKey', "Unknown")
                 },
-                "fields": {
+                device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE, extra_tags=extra_tags,
+            ))
+            end_time = activity_start_time + timedelta(seconds=int(activity.get('elapsedDuration', activity.get('duration', 0))))
+            points_list.extend(build_timestamped_point(
+                "ActivitySummary", end_time, {
                     "Activity_ID": activity.get('activityId'),
                     'Device_ID': activity.get('deviceId'),
                     'activityName': "END",
                     'activityType': "No Activity",
-                }
-            })
+                },
+                device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE, extra_tags=extra_tags,
+            ))
             logging.info(f"Success : Fetching Activity summary with id {activity.get('activityId')} for date {date_str}")
         else:
             logging.warning(f"Skipped : Start Timestamp missing for activity id {activity.get('activityId')} for date {date_str}")
@@ -662,19 +653,16 @@ def get_strength_training_data(strength_activity_id_dict):
                     "Weight_kg": weight_kg,
                     "Duration_s": duration_s,
                 }
-                exercise_set_points.append({
-                    "measurement": "StrengthExerciseSet",
-                    "time": set_time,
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE,
+                exercise_set_points.extend(build_timestamped_point(
+                    "StrengthExerciseSet", set_time, data_fields,
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                    extra_tags={
                         "ActivityID": activity_id,
                         "ActivitySelector": activity_selector,
                         "ExerciseCategory": category,
                         "ExerciseLabel": exercise_label,
                     },
-                    "fields": data_fields
-                })
+                ))
             logging.info(f"Success : Fetching {set_counter} strength exercise sets for activity {activity_id}")
         except Exception as err:
             logging.warning(f"Failed to fetch exercise sets for activity {activity_id}: {err}")
@@ -700,17 +688,12 @@ def get_strength_training_data(strength_activity_id_dict):
                     "SecsInZone": zone_info.get('secsInZone'),
                     "ZoneLowBoundary": zone_info.get('zoneLowBoundary'),
                 }
-                points_list.append({
-                    "measurement": "StrengthHRZones",
-                    "time": (activity_start_time + timedelta(milliseconds=int(zone_number))).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE,
-                        "ActivityID": activity_id,
-                        "ActivitySelector": activity_selector,
-                    },
-                    "fields": data_fields
-                })
+                zone_time = activity_start_time + timedelta(milliseconds=int(zone_number))
+                points_list.extend(build_timestamped_point(
+                    "StrengthHRZones", zone_time, data_fields,
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                    extra_tags={"ActivityID": activity_id, "ActivitySelector": activity_selector},
+                ))
             logging.info(f"Success : Fetching strength HR zones for activity {activity_id}")
         except Exception as err:
             logging.warning(f"Failed to fetch HR zones for activity {activity_id}: {err}")
