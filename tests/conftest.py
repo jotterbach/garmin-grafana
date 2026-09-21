@@ -5,10 +5,21 @@ Critical ordering note: garmin_fetch.py opens a real InfluxDB connection and
 writes a demo point as a *side effect of being imported* (see
 src/garmin_grafana/garmin_fetch.py, the module-level try/except right after
 the ENV var parsing block). That means the test database must exist, and the
-right env vars must be set, *before* anything does `from garmin_grafana
-import garmin_fetch` -- including test collection itself. This file runs
-before any test module in this directory is collected, so all of that setup
-happens here at module level, not inside a fixture function.
+right env vars must be set, *before* anything imports garmin_fetch --
+including test collection itself. This file runs before any test module in
+this directory is collected, so all of that setup happens here at module
+level, not inside a fixture function.
+
+Import mode: garmin_fetch.py is run in production as a raw script
+(Dockerfile: `python garmin_grafana/garmin_fetch.py`), which puts its own
+directory on sys.path[0] -- garmin_fetch.py's sibling imports (e.g. `from
+config import Config`) rely on that, matching the same bare-import
+convention the other sibling scripts already use (fit_activity_importer.py:
+`import garmin_fetch`). So tests add src/garmin_grafana itself to sys.path
+and use bare `import garmin_fetch` / `import config` too, rather than
+package-qualified imports -- exercising the same import mode production
+actually uses, not a more lenient one that would hide an import bug like
+this until it broke in the real container.
 
 Deliberately isolated from the real deployment: distinct host/port/database
 name from the project's own compose.yml defaults, so this can never be
@@ -17,6 +28,7 @@ accidentally pointed at real ingested health data.
 
 import json
 import os
+import sys
 import time
 from pathlib import Path
 
@@ -26,6 +38,9 @@ from influxdb.exceptions import InfluxDBClientError
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 REPO_ROOT = Path(__file__).parent.parent
+SRC_PACKAGE_DIR = REPO_ROOT / "src" / "garmin_grafana"
+
+sys.path.insert(0, str(SRC_PACKAGE_DIR))
 
 TEST_INFLUXDB_HOST = os.environ.get("TEST_INFLUXDB_HOST", "127.0.0.1")
 TEST_INFLUXDB_PORT = int(os.environ.get("TEST_INFLUXDB_PORT", "18086"))
@@ -137,11 +152,11 @@ def garmin_fetch_module():
     against the isolated test database set up above) and injects fake_garmin
     as garmin_fetch.garmin_obj, matching the existing project convention in
     fit_activity_importer.py of assigning garmin_fetch.garmin_obj directly.
-    """
-    import sys
 
-    sys.path.insert(0, str(REPO_ROOT / "src"))
-    from garmin_grafana import garmin_fetch
+    Bare import (not `from garmin_grafana import garmin_fetch`) -- see this
+    file's module docstring for why that matters here.
+    """
+    import garmin_fetch
 
     garmin_fetch.garmin_obj = FakeGarmin()
     return garmin_fetch
