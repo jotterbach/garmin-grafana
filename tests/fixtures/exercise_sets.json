@@ -1,0 +1,27 @@
+{
+  "exerciseSets": [
+    {
+      "setType": "ACTIVE",
+      "setOrder": 1,
+      "repetitionCount": 10,
+      "weight": 60000,
+      "duration": 45.0,
+      "startTime": "2026-01-15T18:05:00.0",
+      "exercises": [{"category": "BENCH_PRESS", "name": "BARBELL_BENCH_PRESS"}]
+    },
+    {
+      "setType": "REST",
+      "setOrder": 2,
+      "duration": 90.0
+    },
+    {
+      "setType": "ACTIVE",
+      "setOrder": 3,
+      "repetitionCount": 8,
+      "weight": 65000,
+      "duration": 40.0,
+      "startTime": null,
+      "exercises": [{"category": "BENCH_PRESS", "name": "BARBELL_BENCH_PRESS"}]
+    }
+  ]
+}
