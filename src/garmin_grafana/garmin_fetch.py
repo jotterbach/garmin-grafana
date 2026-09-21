@@ -292,25 +292,26 @@ def get_sleep_data(date_str):
                     "SleepIntraday", timestamp, fields,
                     device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
                 ))
-        # Add additional duplicate terminal data point (see issue #127) --
-        # deliberately NOT routed through build_timestamped_point: this
-        # point's guard (endGMT truthiness only) is intentionally weaker
-        # than the per-entry guard above, and can legitimately produce a
-        # single None-valued field (when the last entry's activityLevel
-        # was dropped above but its endGMT is still truthy). Routing this
-        # through the shared helper would silently drop it instead, since
-        # the helper treats an all-None fields dict as "no point" -- a
-        # real behavior change, not a negligible edge case.
+        # Add additional duplicate terminal data point (see issue #127).
+        # Routed through build_timestamped_point -- its all-None-fields
+        # guard skips creating a point when the last entry's
+        # activityLevel was None (dropped by the per-entry guard above,
+        # but endGMT still truthy). This is a deliberate, disclosed fix,
+        # not just a preserved quirk: confirmed via real-production
+        # verification that writing a single None-valued field crashes
+        # the *entire* InfluxDB write batch (the influxdb client's line-
+        # protocol serializer drops a None field entirely, leaving zero
+        # fields, which is invalid line protocol) -- a real, reproducible
+        # bug in the pre-existing code, not a negligible edge case.
+        # Silently omitting the duplicate point in this case is strictly
+        # safer than crashing the whole batch, and still honors issue
+        # #127's intent whenever there's an actual value to duplicate.
         if entry.get("endGMT"):
-            points_list.append({
-                "measurement":  "SleepIntraday",
-                "time": pytz.timezone("UTC").localize(datetime.strptime(entry["endGMT"], "%Y-%m-%dT%H:%M:%S.%f")).isoformat(),
-                "tags": {
-                    "Device": GARMIN_DEVICENAME,
-                    "Database_Name": INFLUXDB_DATABASE
-                },
-                "fields": {"SleepStageLevel": entry.get("activityLevel")} # Duplicating last entry for visualization in Grafana
-            })
+            timestamp = pytz.timezone("UTC").localize(datetime.strptime(entry["endGMT"], "%Y-%m-%dT%H:%M:%S.%f"))
+            points_list.extend(build_timestamped_point(
+                "SleepIntraday", timestamp, {"SleepStageLevel": entry.get("activityLevel")},
+                device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+            ))
     sleep_restlessness_intraday = all_sleep_data.get("sleepRestlessMoments")
     if sleep_restlessness_intraday:
         for entry in sleep_restlessness_intraday:

@@ -176,11 +176,20 @@ def test_sleep_levels_exact_point_shape(garmin_fetch_module):
     """The highest-risk sub-shape: truthy-or-zero guard (issue #43: 0.0
     is deep sleep, kept) PLUS a duplicate terminal point (issue #127)
     appended after the loop, using Python's leaked loop variable (the
-    *last* entry), guarded only by endGMT truthiness -- NOT by the
-    per-entry activityLevel guard. The fixture's last entry has
-    activityLevel: null (dropped by the per-entry guard, so no regular
-    point for it) but a valid endGMT, so the duplicate point still fires
-    with a None field -- this exact quirk is preserved, not "fixed"."""
+    *last* entry), guarded by endGMT truthiness.
+
+    The fixture's last entry has activityLevel: null (dropped by the
+    per-entry guard, so no regular point for it) and a valid endGMT.
+    Real-production verification found that writing a point whose only
+    field is None crashes the *entire* InfluxDB write batch (the
+    influxdb client's line-protocol serializer drops a None field
+    entirely, leaving zero fields -- invalid line protocol) -- a real,
+    reproducible bug in the pre-existing code. So unlike every other
+    guard-preservation in this phase, this one case is a deliberate,
+    disclosed *fix*: the duplicate point is silently omitted here
+    (routed through build_timestamped_point, whose all-None-fields guard
+    catches it) rather than reproducing the crash.
+    """
     points = garmin_fetch_module.get_sleep_data(DATE_STR)
     level_points = [p for p in points if "SleepStageLevel" in p["fields"]]
     assert level_points == [
@@ -196,10 +205,31 @@ def test_sleep_levels_exact_point_shape(garmin_fetch_module):
             "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
             "fields": {"SleepStageLevel": 0.0, "SleepStageSeconds": 1800},
         },
+    ]
+
+
+def test_sleep_levels_duplicate_terminal_point_fires_when_last_entry_valid(garmin_fetch_module):
+    """The positive case for issue #127: when the last sleepLevels entry
+    has a real (non-null) activityLevel, the duplicate terminal point
+    still fires normally, duplicating that value at the entry's endGMT --
+    proving the None-fields fix above only suppresses the duplicate point
+    in the specific null-activityLevel case, not always."""
+    garmin_fetch_module.garmin_obj._sleep["sleepLevels"] = [
+        {"startGMT": "2026-01-15T02:30:00.0", "endGMT": "2026-01-15T03:00:00.0", "activityLevel": 2.0},
+    ]
+    points = garmin_fetch_module.get_sleep_data(DATE_STR)
+    level_points = [p for p in points if "SleepStageLevel" in p["fields"]]
+    assert level_points == [
         {
             "measurement": "SleepIntraday",
-            "time": "2026-01-15T04:00:00+00:00",
+            "time": "2026-01-15T02:30:00+00:00",
             "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
-            "fields": {"SleepStageLevel": None},
+            "fields": {"SleepStageLevel": 2.0, "SleepStageSeconds": 1800},
+        },
+        {
+            "measurement": "SleepIntraday",
+            "time": "2026-01-15T03:00:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"SleepStageLevel": 2.0},
         },
     ]
