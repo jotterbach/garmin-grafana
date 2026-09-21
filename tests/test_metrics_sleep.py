@@ -142,3 +142,17 @@ def test_sleep_stress_exact_point_shape(garmin_fetch_module):
             "fields": {"stressValue": 15},
         },
     ]
+
+
+def test_sleep_body_battery_exact_point_shape(garmin_fetch_module):
+    """Truthy-only guard: a 0 value is dropped."""
+    points = garmin_fetch_module.get_sleep_data(DATE_STR)
+    bb_points = [p for p in points if "bodyBattery" in p["fields"]]
+    assert bb_points == [
+        {
+            "measurement": "SleepIntraday",
+            "time": "2026-01-15T03:45:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"bodyBattery": 68},
+        },
+    ]
