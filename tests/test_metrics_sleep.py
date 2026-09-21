@@ -100,3 +100,17 @@ def test_sleep_spo2_exact_point_shape(garmin_fetch_module):
             "fields": {"spo2Reading": 95},
         },
     ]
+
+
+def test_sleep_respiration_exact_point_shape(garmin_fetch_module):
+    """Truthy-only guard: a 0.0 reading is dropped."""
+    points = garmin_fetch_module.get_sleep_data(DATE_STR)
+    respiration_points = [p for p in points if "respirationValue" in p["fields"]]
+    assert respiration_points == [
+        {
+            "measurement": "SleepIntraday",
+            "time": "2026-01-15T03:10:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"respirationValue": 13.5},
+        },
+    ]
