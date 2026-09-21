@@ -28,35 +28,9 @@ of scope here -- it doesn't touch FIT parsing directly and needs no real
 fixture; see the plan for that as a separate, still-open piece of work.
 """
 
-import io
-import zipfile
-from pathlib import Path
-
 import pytest
 
-from conftest import real_fit_paths
-
-
-class RealFitGarmin:
-    """
-    Minimal stand-in for garminconnect.Garmin wrapping one real local FIT
-    file, matching the existing MockGarminObject pattern in
-    fit_activity_importer.py: download_activity() zips the file in-memory
-    the same shape the real ORIGINAL-format download returns.
-    """
-
-    class ActivityDownloadFormat:
-        ORIGINAL = "original"
-        TCX = "tcx"
-
-    def __init__(self, fit_path: Path):
-        self._fit_path = fit_path
-
-    def download_activity(self, activity_id, dl_fmt=None):
-        buf = io.BytesIO()
-        with zipfile.ZipFile(buf, mode="w") as zf:
-            zf.write(self._fit_path, arcname=self._fit_path.name)
-        return buf.getvalue()
+from conftest import RealFitGarmin, real_fit_paths
 
 
 def _find(name_substring):
