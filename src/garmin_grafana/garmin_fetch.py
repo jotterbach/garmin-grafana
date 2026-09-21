@@ -1736,9 +1736,13 @@ def fetch_write_bulk(start_date_str, end_date_str):
 if __name__ == "__main__":
     try:
         INFLUXDB_STORAGE.check_connection()
-    except (InfluxDBClientError, InfluxDBError) as err:
+    except (InfluxDBClientError, InfluxDBError):
+        # check_connection() already wraps the underlying error into a
+        # descriptive InfluxDBClientError -- re-raise it as-is rather than
+        # wrapping it again, which previously produced a doubled message
+        # ("InfluxDB connection failed:InfluxDB connection failed:...").
         logging.error("Unable to connect with influxdb database! Aborted")
-        raise InfluxDBClientError("InfluxDB connection failed:" + str(err))
+        raise
 
     garmin_obj = garmin_login()
 
