@@ -445,17 +445,11 @@ def get_intraday_steps(date_str):
     steps_list = garmin_obj.get_steps_data(date_str)
     for entry in steps_list:
         if entry["steps"] or entry["steps"] == 0:
-            points_list.append({
-                    "measurement":  "StepsIntraday",
-                    "time": pytz.timezone("UTC").localize(datetime.strptime(entry['startGMT'], "%Y-%m-%dT%H:%M:%S.%f")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {
-                        "StepsCount": entry["steps"]
-                    }
-                })
+            timestamp = pytz.timezone("UTC").localize(datetime.strptime(entry['startGMT'], "%Y-%m-%dT%H:%M:%S.%f"))
+            points_list.extend(build_timestamped_point(
+                "StepsIntraday", timestamp, {"StepsCount": entry["steps"]},
+                device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+            ))
     if points_list:
         logging.info(f"Success : Fetching intraday steps for date {date_str}")
     return points_list
