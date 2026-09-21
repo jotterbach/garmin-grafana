@@ -523,17 +523,16 @@ def get_body_composition(date_str):
                     # "metabolicAge": datetime.fromtimestamp(int(weight_dict.get("metabolicAge")/1000), tz=pytz.timezone("UTC")).isoformat() if weight_dict.get("metabolicAge") else None
                 }
             if not all(value is None for value in data_fields.values()):
-                points_list.append({
-                    "measurement":  "BodyComposition",
-                    "time": datetime.fromtimestamp((weight_dict['timestampGMT']/1000) , tz=pytz.timezone("UTC")).isoformat() if weight_dict['timestampGMT'] else datetime.strptime(date_str, "%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(), # Use GMT 00:00 is timestamp is not available (issue #15)
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE,
-                        "Frequency" : "Intraday",
-                        "SourceType" : weight_dict.get('sourceType', "Unknown")
-                    },
-                    "fields": data_fields
-                })
+                timestamp = (
+                    datetime.fromtimestamp((weight_dict['timestampGMT']/1000), tz=pytz.timezone("UTC"))
+                    if weight_dict['timestampGMT']
+                    else datetime.strptime(date_str, "%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC)
+                )  # Use GMT 00:00 is timestamp is not available (issue #15)
+                points_list.extend(build_timestamped_point(
+                    "BodyComposition", timestamp, data_fields,
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                    extra_tags={"Frequency": "Intraday", "SourceType": weight_dict.get('sourceType', "Unknown")},
+                ))
         logging.info(f"Success : Fetching intraday Body Composition (Weight, BMI etc) for date {date_str}")
     return points_list
 
