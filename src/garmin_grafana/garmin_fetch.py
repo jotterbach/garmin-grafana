@@ -653,19 +653,16 @@ def get_strength_training_data(strength_activity_id_dict):
                     "Weight_kg": weight_kg,
                     "Duration_s": duration_s,
                 }
-                exercise_set_points.append({
-                    "measurement": "StrengthExerciseSet",
-                    "time": set_time,
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE,
+                exercise_set_points.extend(build_timestamped_point(
+                    "StrengthExerciseSet", set_time, data_fields,
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                    extra_tags={
                         "ActivityID": activity_id,
                         "ActivitySelector": activity_selector,
                         "ExerciseCategory": category,
                         "ExerciseLabel": exercise_label,
                     },
-                    "fields": data_fields
-                })
+                ))
             logging.info(f"Success : Fetching {set_counter} strength exercise sets for activity {activity_id}")
         except Exception as err:
             logging.warning(f"Failed to fetch exercise sets for activity {activity_id}: {err}")
