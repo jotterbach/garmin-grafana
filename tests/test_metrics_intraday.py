@@ -132,3 +132,62 @@ def test_intraday_stress_exact_point_shape(garmin_fetch_module):
             "fields": {"BodyBatteryLevel": 0},
         },
     ]
+
+
+def test_daily_stats_exact_point_shape(garmin_fetch_module):
+    """Guard is a compound (timestamp truthy AND date < today) check, not
+    a fields-None guard -- unaffected by which fields are populated."""
+    points = garmin_fetch_module.get_daily_stats(DATE_STR)
+    assert points == [
+        {
+            "measurement": "DailyStats",
+            "time": "2026-01-15T06:00:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {
+                "activeKilocalories": 650.0,
+                "bmrKilocalories": 1650.0,
+                "totalSteps": 9800,
+                "totalDistanceMeters": 7200,
+                "highlyActiveSeconds": 1800,
+                "activeSeconds": 5400,
+                "sedentarySeconds": 43200,
+                "sleepingSeconds": 25200,
+                "moderateIntensityMinutes": 45,
+                "vigorousIntensityMinutes": 20,
+                "floorsAscendedInMeters": 24.4,
+                "floorsDescendedInMeters": 24.4,
+                "floorsAscended": 8.0,
+                "floorsDescended": 8.0,
+                "minHeartRate": 48,
+                "maxHeartRate": 172,
+                "restingHeartRate": 52,
+                "minAvgHeartRate": 50,
+                "maxAvgHeartRate": 148,
+                "avgSkinTempDeviationC": -0.2,
+                "avgSkinTempDeviationF": -0.36,
+                "stressDuration": None,
+                "restStressDuration": None,
+                "activityStressDuration": None,
+                "uncategorizedStressDuration": None,
+                "totalStressDuration": None,
+                "lowStressDuration": None,
+                "mediumStressDuration": None,
+                "highStressDuration": None,
+                "stressPercentage": None,
+                "restStressPercentage": None,
+                "activityStressPercentage": None,
+                "uncategorizedStressPercentage": None,
+                "lowStressPercentage": None,
+                "mediumStressPercentage": None,
+                "highStressPercentage": None,
+                "bodyBatteryChargedValue": None,
+                "bodyBatteryDrainedValue": None,
+                "bodyBatteryHighestValue": None,
+                "bodyBatteryLowestValue": None,
+                "bodyBatteryDuringSleep": None,
+                "bodyBatteryAtWakeTime": None,
+                "averageSpo2": None,
+                "lowestSpo2": None,
+            },
+        }
+    ]
