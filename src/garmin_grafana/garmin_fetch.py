@@ -319,17 +319,11 @@ def get_sleep_data(date_str):
     if sleep_spo2_intraday:
         for entry in sleep_spo2_intraday:
             if entry.get("spo2Reading"):
-                points_list.append({
-                    "measurement":  "SleepIntraday",
-                    "time": pytz.timezone("UTC").localize(datetime.strptime(entry["epochTimestamp"], "%Y-%m-%dT%H:%M:%S.%f")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {
-                        "spo2Reading": entry.get("spo2Reading")
-                    }
-                })
+                timestamp = pytz.timezone("UTC").localize(datetime.strptime(entry["epochTimestamp"], "%Y-%m-%dT%H:%M:%S.%f"))
+                points_list.extend(build_timestamped_point(
+                    "SleepIntraday", timestamp, {"spo2Reading": entry.get("spo2Reading")},
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                ))
     sleep_respiration_intraday = all_sleep_data.get("wellnessEpochRespirationDataDTOList")
     if sleep_respiration_intraday:
         for entry in sleep_respiration_intraday:
