@@ -107,5 +107,72 @@
     "sweatLossInML": 450.0,
     "goalInML": 3000.0,
     "activityIntakeInML": 200.0
+  },
+  "training_readiness": [
+    {
+      "timestamp": "2026-01-15T06:30:00.0",
+      "level": "HIGH",
+      "score": 72,
+      "sleepScore": 85,
+      "sleepScoreFactorPercent": 30,
+      "recoveryTime": 12,
+      "recoveryTimeFactorPercent": 20,
+      "acwrFactorPercent": 15,
+      "acuteLoad": 320,
+      "stressHistoryFactorPercent": 10,
+      "hrvFactorPercent": 25
+    }
+  ],
+  "blood_pressure": {
+    "measurementSummaries": [
+      {
+        "measurements": [
+          {
+            "systolic": 120,
+            "diastolic": 80,
+            "pulse": 65,
+            "measurementTimestampGMT": "2026-01-15T06:30:00.0",
+            "sourceType": "MANUAL"
+          }
+        ]
+      }
+    ]
+  },
+  "training_status": {
+    "mostRecentTrainingStatus": {
+      "latestTrainingStatusData": {
+        "3456789012": {
+          "trainingStatus": 4,
+          "trainingStatusFeedbackPhrase": "PRODUCTIVE",
+          "weeklyTrainingLoad": 850,
+          "fitnessTrend": "MAINTAINING",
+          "timestamp": 1768460400000,
+          "acuteTrainingLoadDTO": {
+            "acwrPercent": 105,
+            "dailyTrainingLoadAcute": 320,
+            "dailyTrainingLoadChronic": 280,
+            "maxTrainingLoadChronic": 400,
+            "minTrainingLoadChronic": 150,
+            "dailyAcuteChronicWorkloadRatio": 1.14
+          }
+        }
+      }
+    }
+  },
+  "solar_intensity": {
+    "solarDailyDataDTOs": [
+      {
+        "solarInputReadings": [
+          {
+            "solarUtilization": 45,
+            "activityTimeGainMs": 1200,
+            "readingTimestampGmt": "2026-01-15T06:30:00.0"
+          }
+        ]
+      }
+    ]
+  },
+  "lactate_threshold_value": {
+    "value": 165
   }
 }
