@@ -688,17 +688,12 @@ def get_strength_training_data(strength_activity_id_dict):
                     "SecsInZone": zone_info.get('secsInZone'),
                     "ZoneLowBoundary": zone_info.get('zoneLowBoundary'),
                 }
-                points_list.append({
-                    "measurement": "StrengthHRZones",
-                    "time": (activity_start_time + timedelta(milliseconds=int(zone_number))).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE,
-                        "ActivityID": activity_id,
-                        "ActivitySelector": activity_selector,
-                    },
-                    "fields": data_fields
-                })
+                zone_time = activity_start_time + timedelta(milliseconds=int(zone_number))
+                points_list.extend(build_timestamped_point(
+                    "StrengthHRZones", zone_time, data_fields,
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                    extra_tags={"ActivityID": activity_id, "ActivitySelector": activity_selector},
+                ))
             logging.info(f"Success : Fetching strength HR zones for activity {activity_id}")
         except Exception as err:
             logging.warning(f"Failed to fetch HR zones for activity {activity_id}: {err}")
