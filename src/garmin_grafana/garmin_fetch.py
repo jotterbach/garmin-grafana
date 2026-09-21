@@ -283,19 +283,24 @@ def get_sleep_data(date_str):
     if sleep_levels_intraday:
         for entry in sleep_levels_intraday:
             if entry.get("activityLevel") or entry.get("activityLevel") == 0: # Include 0 for Deepsleep but not None - Refer to issue #43
-                points_list.append({
-                    "measurement":  "SleepIntraday",
-                    "time": pytz.timezone("UTC").localize(datetime.strptime(entry["startGMT"], "%Y-%m-%dT%H:%M:%S.%f")).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {
-                        "SleepStageLevel": entry.get("activityLevel"),
-                        "SleepStageSeconds": int((datetime.strptime(entry["endGMT"], "%Y-%m-%dT%H:%M:%S.%f") - datetime.strptime(entry["startGMT"], "%Y-%m-%dT%H:%M:%S.%f")).total_seconds())
-                    }
-                })
-        # Add additional duplicate terminal data point (see issue #127)
+                timestamp = pytz.timezone("UTC").localize(datetime.strptime(entry["startGMT"], "%Y-%m-%dT%H:%M:%S.%f"))
+                fields = {
+                    "SleepStageLevel": entry.get("activityLevel"),
+                    "SleepStageSeconds": int((datetime.strptime(entry["endGMT"], "%Y-%m-%dT%H:%M:%S.%f") - datetime.strptime(entry["startGMT"], "%Y-%m-%dT%H:%M:%S.%f")).total_seconds())
+                }
+                points_list.extend(build_timestamped_point(
+                    "SleepIntraday", timestamp, fields,
+                    device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+                ))
+        # Add additional duplicate terminal data point (see issue #127) --
+        # deliberately NOT routed through build_timestamped_point: this
+        # point's guard (endGMT truthiness only) is intentionally weaker
+        # than the per-entry guard above, and can legitimately produce a
+        # single None-valued field (when the last entry's activityLevel
+        # was dropped above but its endGMT is still truthy). Routing this
+        # through the shared helper would silently drop it instead, since
+        # the helper treats an all-None fields dict as "no point" -- a
+        # real behavior change, not a negligible edge case.
         if entry.get("endGMT"):
             points_list.append({
                 "measurement":  "SleepIntraday",
