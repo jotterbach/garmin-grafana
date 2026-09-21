@@ -12,7 +12,20 @@ and test_solar_intensity_exact_point_shape's docstrings), in which case the
 test is updated to match the new, understood behavior rather than kept red.
 """
 
+from datetime import datetime
+
+import pytz
+
 DATE_STR = "2026-01-15"
+
+# Mirrors get_lactate_threshold's own (implicit-local-timezone) timestamp
+# computation exactly, rather than hardcoding a value that would silently
+# depend on this test machine's system timezone -- see that function's
+# refactor commit for why this computation itself is being preserved
+# as-is, not "fixed".
+LACTATE_THRESHOLD_EXPECTED_TIME = datetime.fromtimestamp(
+    datetime.strptime(DATE_STR, "%Y-%m-%d").timestamp(), tz=pytz.timezone("UTC")
+).isoformat()
 
 
 def test_training_readiness_exact_point_shape(garmin_fetch_module):
@@ -35,6 +48,30 @@ def test_training_readiness_exact_point_shape(garmin_fetch_module):
                 "hrvFactorPercent": 25,
             },
         }
+    ]
+
+
+def test_lactate_threshold_exact_point_shape(garmin_fetch_module):
+    """
+    Default LACTATE_THRESHOLD_SPORTS config is a single sport ("RUNNING"),
+    so get_lactate_threshold builds two endpoints (speed + heart rate
+    threshold) and FakeGarmin.connectapi returns the same canned value for
+    both -- two single-field points, in endpoint-iteration order.
+    """
+    points = garmin_fetch_module.get_lactate_threshold(DATE_STR)
+    assert points == [
+        {
+            "measurement": "LactateThreshold",
+            "time": LACTATE_THRESHOLD_EXPECTED_TIME,
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"SpeedThreshold_RUNNING": 165},
+        },
+        {
+            "measurement": "LactateThreshold",
+            "time": LACTATE_THRESHOLD_EXPECTED_TIME,
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"HeartRateThreshold_RUNNING": 165},
+        },
     ]
 
 
