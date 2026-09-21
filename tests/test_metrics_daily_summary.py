@@ -94,3 +94,23 @@ def test_vo2_max_zero_value_is_treated_as_no_data(garmin_fetch_module):
     ]
     points = garmin_fetch_module.get_vo2_max(DATE_STR)
     assert points == []
+
+
+def test_endurance_score_exact_point_shape(garmin_fetch_module):
+    points = garmin_fetch_module.get_endurance_score(DATE_STR)
+    assert points == [
+        {
+            "measurement": "EnduranceScore",
+            "time": "2026-01-15T00:00:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"EnduranceScore": 412},
+        }
+    ]
+
+
+def test_endurance_score_zero_value_is_treated_as_no_data(garmin_fetch_module):
+    """Original guard is `if endurance_dict.get("overallScore"):` (truthy),
+    not an is-None check -- same subtlety as get_vo2_max."""
+    garmin_fetch_module.garmin_obj._daily["endurance_score"] = {"overallScore": 0}
+    points = garmin_fetch_module.get_endurance_score(DATE_STR)
+    assert points == []
