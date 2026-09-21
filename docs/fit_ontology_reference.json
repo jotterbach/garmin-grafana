@@ -1,0 +1,88 @@
+{
+  "_meta": {
+    "description": "Draft reference for InfluxDB measurements this project could add, based on real (but currently-uncaptured) fields found in FIT files during the fitparse -> garmin-fit-sdk migration (issue #26). This is a design sketch, not an implemented schema -- nothing here is written to InfluxDB yet. Field counts refer to docs/fit_field_inventory.json, a 143-file real personal FIT corpus (counts/types only, no real values committed).",
+    "status": "proposal, not implemented",
+    "generated": "2026-09-21",
+    "see_also": ["docs/fit_field_inventory.json", "issue #26"]
+  },
+  "existing_measurements": {
+    "_note": "Already implemented in garmin_fetch.py (fetch_activity_GPS / _build_cycling_dynamics_point) -- listed here only for context, so proposed additions below can be compared against what already exists rather than duplicating it.",
+    "ActivityGPS": ["Latitude", "Longitude", "Altitude", "Distance", "DurationSeconds", "HeartRate", "Speed", "GradeAdjustedSpeed", "RunningEfficiency", "Cadence", "Fractional_Cadence", "Temperature", "Accumulated_Power", "Power", "Vertical_Oscillation", "Stance_Time", "Vertical_Ratio", "Step_Length"],
+    "ActivitySession": ["Index", "Sport", "Sub_Sport", "Pool_Length", "Pool_Length_Unit", "Lengths", "Laps", "Aerobic_Training", "Anaerobic_Training", "Primary_Benefit", "Recovery_Time"],
+    "ActivityLap": ["Index", "Elapsed_Time", "Sport", "Lengths", "Length_Index", "Distance", "Ascent", "Descent", "Cycles", "Avg_Stroke_Distance", "Moving_Duration", "Standing_Duration", "Avg_Speed", "Max_Speed", "Calories", "Avg_Power", "Avg_HR", "Max_HR", "Avg_Cadence", "Avg_Temperature", "Avg_Vertical_Oscillation", "Avg_Stance_Time", "Avg_Vertical_Ratio", "Avg_Step_Length"],
+    "ActivityLength": ["Index", "Elapsed_Time", "Strokes", "Swim_Stroke", "Avg_Speed", "Calories", "Avg_Cadence"],
+    "CyclingDynamics": ["avg_left_torque_effectiveness", "avg_right_torque_effectiveness", "avg_left_pedal_smoothness", "avg_right_pedal_smoothness", "avg_left_pco", "avg_right_pco", "avg_left/right_power_phase_start/end", "avg_left/right_power_phase_peak_start/end", "normalized_power", "training_stress_score", "intensity_factor", "left_right_balance"]
+  },
+  "proposed_measurements": {
+    "ActivityTimeInZone": {
+      "source_fit_message": "time_in_zone_mesgs",
+      "corpus_signal": "142/143 files",
+      "rationale": "Per-activity HR/power zone time distribution -- not derivable from any data this project already ingests. Highest-signal candidate found.",
+      "candidate_fields": {
+        "ZoneType": "str -- e.g. heart_rate | power, need to confirm exact field name/values from a real decode",
+        "Zone1Seconds..Zone5Seconds": "float -- time spent in each zone",
+        "ReferenceMax/ReferenceThreshold": "possibly present for context (max HR / FTP the zones were computed against)"
+      },
+      "open_questions": [
+        "One time_in_zone_mesgs entry per activity, or per lap? Needs a real-decode pass to confirm.",
+        "Does it cover both HR zones and power zones in the same message, or separate entries?"
+      ]
+    },
+    "ActivityRespiration": {
+      "source_fit_message": "record_mesgs.enhanced_respiration_rate, session_mesgs.enhanced_avg/max/min_respiration_rate",
+      "corpus_signal": "record: 94/143 files, session: 93/143 files",
+      "rationale": "Breathing rate during the activity -- distinct from the daily/resting breathing-rate metric already ingested via a separate Garmin Connect endpoint.",
+      "candidate_fields": {
+        "on ActivityGPS (per-record)": "RespirationRate: float",
+        "on ActivitySession (session summary)": "Avg_Respiration_Rate, Max_Respiration_Rate, Min_Respiration_Rate: float"
+      }
+    },
+    "ActivityHRV": {
+      "source_fit_message": "hrv_mesgs",
+      "corpus_signal": "70/143 files",
+      "rationale": "HRV recorded during the activity itself, distinct from the nightly/sleep HRV data already ingested.",
+      "candidate_fields": {
+        "Time": "timestamp",
+        "HRV": "float -- exact field name/shape not yet confirmed from a real decode"
+      },
+      "open_questions": ["Confirm field name(s) and whether it's a single time series or RR-interval-style data (which would need very different point shaping)."]
+    },
+    "ActivitySplits": {
+      "source_fit_message": "split_mesgs, split_summary_mesgs",
+      "corpus_signal": "split_mesgs: 37/143 files, split_summary_mesgs: 52/143 files",
+      "rationale": "Auto-lap 'active vs. rest' split data, useful for interval-workout analysis -- currently only ActivityLap exists, which doesn't distinguish rest/active segments.",
+      "candidate_fields": {
+        "SplitType": "str -- e.g. interval_active | interval_rest",
+        "Elapsed_Time, Distance, Avg_HR, Avg_Power": "same shape as ActivityLap's equivalents"
+      }
+    },
+    "ActivityDeveloperMetrics": {
+      "source_fit_message": "record_mesgs.developer_fields / session_mesgs.developer_fields / lap_mesgs.developer_fields, resolved via field_description_mesgs",
+      "corpus_signal": "~93/143 files across record/session/lap",
+      "rationale": "Real third-party sensor data (field shapes suggest a paired body-temperature sensor on at least one device in the corpus). Currently nameless -- neither fitparse nor garmin-fit-sdk resolve developer field names automatically.",
+      "candidate_fields": "Unknown until field_description_mesgs is decoded and cross-referenced per developer_data_id -- this measurement needs its own resolution step before any field names can be proposed.",
+      "open_questions": [
+        "Is this the same sensor/vendor across all 93 files, or several different ones? (namespacing may be needed)",
+        "Worth a generic 'DeveloperField_<n>' fallback naming scheme for anything field_description_mesgs itself can't resolve?"
+      ]
+    },
+    "ActivityStrengthSets (FIT-sourced, name TBD)": {
+      "source_fit_message": "set_mesgs",
+      "corpus_signal": "35/143 files",
+      "rationale": "Possibly redundant with the JSON-API-based exercise-set data get_strength_training_data() already ingests -- needs investigation before deciding whether this is a new measurement or should feed the existing one.",
+      "open_questions": [
+        "Does set_mesgs carry data (e.g. actual weight) that the JSON API doesn't expose?",
+        "If redundant, is FIT-sourced data more reliable/available (e.g. for manually-imported files with no Garmin Connect activity record)?"
+      ]
+    },
+    "ActivityGPS extension: running-form balance": {
+      "source_fit_message": "record_mesgs.stance_time_percent, record_mesgs.stance_time_balance",
+      "corpus_signal": "18/143 files",
+      "rationale": "Same family as ActivityGPS's existing Vertical_Oscillation/Stance_Time/Vertical_Ratio fields -- cheapest addition here, just two more fields on an existing measurement rather than a new one.",
+      "candidate_fields": {
+        "Stance_Time_Percent": "float",
+        "Stance_Time_Balance": "float"
+      }
+    }
+  }
+}
