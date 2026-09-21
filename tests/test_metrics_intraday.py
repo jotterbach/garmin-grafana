@@ -87,3 +87,48 @@ def test_intraday_steps_exact_point_shape(garmin_fetch_module):
             "fields": {"StepsCount": 0},
         },
     ]
+
+
+def test_intraday_stress_exact_point_shape(garmin_fetch_module):
+    """Two measurements from two separate arrays in one function, both
+    with a truthy-or-zero guard (0 kept, matching get_intraday_steps,
+    not the truthy-only hr/br/hrv pattern)."""
+    points = garmin_fetch_module.get_intraday_stress(DATE_STR)
+    assert points == [
+        {
+            "measurement": "StressIntraday",
+            "time": "2026-01-15T07:00:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"stressLevel": 22},
+        },
+        {
+            "measurement": "StressIntraday",
+            "time": "2026-01-15T07:05:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"stressLevel": 28},
+        },
+        {
+            "measurement": "StressIntraday",
+            "time": "2026-01-15T07:10:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"stressLevel": 0},
+        },
+        {
+            "measurement": "BodyBatteryIntraday",
+            "time": "2026-01-15T07:00:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"BodyBatteryLevel": 74},
+        },
+        {
+            "measurement": "BodyBatteryIntraday",
+            "time": "2026-01-15T07:05:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"BodyBatteryLevel": 72},
+        },
+        {
+            "measurement": "BodyBatteryIntraday",
+            "time": "2026-01-15T07:10:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"BodyBatteryLevel": 0},
+        },
+    ]
