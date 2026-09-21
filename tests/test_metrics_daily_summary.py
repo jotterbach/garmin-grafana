@@ -65,3 +65,32 @@ def test_fitness_age_exact_point_shape(garmin_fetch_module):
             },
         }
     ]
+
+
+def test_vo2_max_exact_point_shape(garmin_fetch_module):
+    points = garmin_fetch_module.get_vo2_max(DATE_STR)
+    assert points == [
+        {
+            "measurement": "VO2_Max",
+            "time": "2026-01-15T00:00:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"VO2_max_value": 47.2, "VO2_max_value_cycling": None},
+        }
+    ]
+
+
+def test_vo2_max_zero_value_is_treated_as_no_data(garmin_fetch_module):
+    """
+    get_vo2_max's original guard is `if vo2_max_value or vo2_max_value_cycling:`
+    (truthy), NOT "not all fields are None" like build_daily_summary_point's
+    own guard -- a value of 0 (falsy, but not None) must still produce no
+    point, matching the pre-refactor behavior exactly. This is exactly the
+    kind of subtle divergence a naive helper-ification would silently
+    introduce (0 is "real data" under an is-None check, but VO2_max=0 was
+    never a real value the original code would have written).
+    """
+    garmin_fetch_module.garmin_obj._daily["max_metrics"] = [
+        {"generic": {"vo2MaxPreciseValue": 0}, "cycling": {"vo2MaxPreciseValue": None}}
+    ]
+    points = garmin_fetch_module.get_vo2_max(DATE_STR)
+    assert points == []
