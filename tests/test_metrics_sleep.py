@@ -114,3 +114,17 @@ def test_sleep_respiration_exact_point_shape(garmin_fetch_module):
             "fields": {"respirationValue": 13.5},
         },
     ]
+
+
+def test_sleep_heart_rate_exact_point_shape(garmin_fetch_module):
+    """Truthy-only guard: a 0 value is dropped."""
+    points = garmin_fetch_module.get_sleep_data(DATE_STR)
+    hr_points = [p for p in points if "heartRate" in p["fields"]]
+    assert hr_points == [
+        {
+            "measurement": "SleepIntraday",
+            "time": "2026-01-15T03:20:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"heartRate": 54},
+        },
+    ]
