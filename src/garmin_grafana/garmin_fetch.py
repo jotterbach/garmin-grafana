@@ -15,6 +15,7 @@ from garminconnect import (
 from config import Config
 from influx_storage import InfluxStorage
 from garmin_client import garmin_login
+from metric_points import build_daily_summary_point
 garmin_obj = None
 banner_text = """
 
@@ -1289,119 +1290,102 @@ def get_training_readiness(date_str):
 
 # Contribution from PR #17 by @arturgoms 
 def get_hillscore(date_str):
-    points_list = []
     hill = garmin_obj.get_hill_score(date_str)
-    if hill:
-        data_fields = {
-            "strengthScore": hill.get("strengthScore"),
-            "enduranceScore": hill.get("enduranceScore"),
-            "hillScoreClassificationId": hill.get("hillScoreClassificationId"),
-            "overallScore": hill.get("overallScore"),
-            "hillScoreFeedbackPhraseId": hill.get("hillScoreFeedbackPhraseId"),
-            "vo2MaxPreciseValue": hill.get("vo2MaxPreciseValue")
-        }
-        if not all(value is None for value in data_fields.values()):
-            points_list.append({
-                "measurement":  "HillScore",
-                "time": datetime.strptime(date_str,"%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(), # Use GMT 00:00 for daily record
-                "tags": {
-                    "Device": GARMIN_DEVICENAME,
-                    "Database_Name": INFLUXDB_DATABASE
-                },
-                "fields": data_fields
-            })
-            logging.info(f"Success : Fetching Hill Score for date {date_str}")
-    return points_list
+    if not hill:
+        return []
+    fields = {
+        "strengthScore": hill.get("strengthScore"),
+        "enduranceScore": hill.get("enduranceScore"),
+        "hillScoreClassificationId": hill.get("hillScoreClassificationId"),
+        "overallScore": hill.get("overallScore"),
+        "hillScoreFeedbackPhraseId": hill.get("hillScoreFeedbackPhraseId"),
+        "vo2MaxPreciseValue": hill.get("vo2MaxPreciseValue")
+    }
+    points = build_daily_summary_point(
+        "HillScore", date_str, fields,
+        device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+    )
+    if points:
+        logging.info(f"Success : Fetching Hill Score for date {date_str}")
+    return points
 
 # Contribution from PR #17 by @arturgoms 
 def get_race_predictions(date_str):
-    points_list = []
     rp_all_list = garmin_obj.get_race_predictions(startdate=date_str, enddate=date_str, _type="daily")
     rp_all = rp_all_list[0] if len(rp_all_list) > 0 else {}
-    if rp_all:
-        data_fields = {
-            "time5K": rp_all.get("time5K"),
-            "time10K": rp_all.get("time10K"),
-            "timeHalfMarathon": rp_all.get("timeHalfMarathon"),
-            "timeMarathon": rp_all.get("timeMarathon"),
-        }
-        if not all(value is None for value in data_fields.values()):
-            points_list.append({
-                "measurement":  "RacePredictions",
-                "time": datetime.strptime(date_str,"%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(), # Use GMT 00:00 for daily record
-                "tags": {
-                    "Device": GARMIN_DEVICENAME,
-                    "Database_Name": INFLUXDB_DATABASE
-                },
-                "fields": data_fields
-            })
-            logging.info(f"Success : Fetching Race Predictions for date {date_str}")
-    return points_list
+    if not rp_all:
+        return []
+    fields = {
+        "time5K": rp_all.get("time5K"),
+        "time10K": rp_all.get("time10K"),
+        "timeHalfMarathon": rp_all.get("timeHalfMarathon"),
+        "timeMarathon": rp_all.get("timeMarathon"),
+    }
+    points = build_daily_summary_point(
+        "RacePredictions", date_str, fields,
+        device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+    )
+    if points:
+        logging.info(f"Success : Fetching Race Predictions for date {date_str}")
+    return points
 
 def get_fitness_age(date_str):
-    points_list = []
     fitness_age = garmin_obj.get_fitnessage_data(date_str)
-
-    if fitness_age:
-            data_fields = {
-                "chronologicalAge": float(fitness_age.get("chronologicalAge")) if fitness_age.get("chronologicalAge") else None,
-                "fitnessAge": fitness_age.get("fitnessAge"),
-                "achievableFitnessAge": fitness_age.get("achievableFitnessAge"),
-            }
-
-            if not all(value is None for value in data_fields.values()):
-                points_list.append({
-                    "measurement": "FitnessAge",
-                    "time": datetime.strptime(date_str,"%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(), # Use GMT 00:00 for daily record
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": data_fields
-                })
-                logging.info(f"Success : Fetching Fitness Age for date {date_str}")
-    return points_list
+    if not fitness_age:
+        return []
+    fields = {
+        "chronologicalAge": float(fitness_age.get("chronologicalAge")) if fitness_age.get("chronologicalAge") else None,
+        "fitnessAge": fitness_age.get("fitnessAge"),
+        "achievableFitnessAge": fitness_age.get("achievableFitnessAge"),
+    }
+    points = build_daily_summary_point(
+        "FitnessAge", date_str, fields,
+        device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+    )
+    if points:
+        logging.info(f"Success : Fetching Fitness Age for date {date_str}")
+    return points
 
 def get_vo2_max(date_str):
-    points_list = []
     max_metrics = garmin_obj.get_max_metrics(date_str)
     try:
-        if max_metrics:
-            vo2_max_value = (max_metrics[0].get("generic") or {}).get("vo2MaxPreciseValue", None)
-            vo2_max_value_cycling = (max_metrics[0].get("cycling") or {}).get("vo2MaxPreciseValue", None)
-            if vo2_max_value or vo2_max_value_cycling:
-                points_list.append({
-                    "measurement":  "VO2_Max",
-                    "time": datetime.strptime(date_str,"%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(), # Use GMT 00:00 for daily record
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": {"VO2_max_value" : vo2_max_value, "VO2_max_value_cycling" : vo2_max_value_cycling}
-                })
-                logging.info(f"Success : Fetching VO2-max for date {date_str}")
-        return points_list
+        if not max_metrics:
+            return []
+        vo2_max_value = (max_metrics[0].get("generic") or {}).get("vo2MaxPreciseValue", None)
+        vo2_max_value_cycling = (max_metrics[0].get("cycling") or {}).get("vo2MaxPreciseValue", None)
+        # Truthy check, not an is-None check like the other single-daily-
+        # point functions -- a value of 0 must still count as "no data",
+        # preserved exactly rather than folded into build_daily_summary_point's
+        # own (different) guard. See tests/test_metrics_daily_summary.py's
+        # test_vo2_max_zero_value_is_treated_as_no_data.
+        if not (vo2_max_value or vo2_max_value_cycling):
+            return []
+        fields = {"VO2_max_value": vo2_max_value, "VO2_max_value_cycling": vo2_max_value_cycling}
+        points = build_daily_summary_point(
+            "VO2_Max", date_str, fields,
+            device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+        )
+        if points:
+            logging.info(f"Success : Fetching VO2-max for date {date_str}")
+        return points
     except AttributeError as err:
         return []
 
 def get_endurance_score(date_str):
-    points_list = []
     endurance_dict = garmin_obj.get_endurance_score(date_str)
-    if endurance_dict:
-        if endurance_dict.get("overallScore"):
-            points_list.append({
-                "measurement":  "EnduranceScore",
-                "time": pytz.timezone("UTC").localize(datetime.strptime(date_str,"%Y-%m-%d")).isoformat(), # Use GMT 00:00 is timestamp is not available
-                "tags": {
-                    "Device": GARMIN_DEVICENAME,
-                    "Database_Name": INFLUXDB_DATABASE
-                },
-                "fields": {
-                    "EnduranceScore": endurance_dict.get("overallScore")
-                    }
-            })
-            logging.info(f"Success : Fetching Endurance Score for date {date_str}")
-    return points_list
+    if not endurance_dict or not endurance_dict.get("overallScore"):
+        # Truthy check, not an is-None check -- a value of 0 must still
+        # count as "no data". See tests/test_metrics_daily_summary.py's
+        # test_endurance_score_zero_value_is_treated_as_no_data.
+        return []
+    fields = {"EnduranceScore": endurance_dict.get("overallScore")}
+    points = build_daily_summary_point(
+        "EnduranceScore", date_str, fields,
+        device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+    )
+    if points:
+        logging.info(f"Success : Fetching Endurance Score for date {date_str}")
+    return points
 
 def get_blood_pressure(date_str):
     points_list = []
@@ -1429,26 +1413,20 @@ def get_blood_pressure(date_str):
     return points_list
 
 def get_hydration(date_str):
-    points_list = []
     hydration_dict = garmin_obj.get_hydration_data(date_str)
-    data_fields = {
+    fields = {
         'ValueInML': hydration_dict.get('valueInML', None),
         "SweatLossInML": hydration_dict.get('sweatLossInML', None),
         "GoalInML": hydration_dict.get('goalInML', None),
         "ActivityIntakeInML": hydration_dict.get('activityIntakeInML', None)
     }
-    if not all(value is None for value in data_fields.values()):
-        points_list.append({
-            "measurement":  "Hydration",
-            "time": datetime.strptime(date_str,"%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(), # Use GMT 00:00 for daily record
-            "tags": {
-                "Device": GARMIN_DEVICENAME,
-                "Database_Name": INFLUXDB_DATABASE
-            },
-            "fields": data_fields
-        })
+    points = build_daily_summary_point(
+        "Hydration", date_str, fields,
+        device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+    )
+    if points:
         logging.info(f"Success : Fetching Hydration data for date {date_str}")
-    return points_list
+    return points
 
 
 def get_solar_intensity(date_str):
@@ -1536,6 +1514,49 @@ def get_lifestyle_data(date_str):
 
 
 # %%
+def _fetch_and_write_activity(date_str):
+    activity_summary_points_list, activity_with_gps_id_dict, strength_activity_id_dict = get_activity_summary(date_str)
+    write_points_to_influxdb(activity_summary_points_list)
+    write_points_to_influxdb(fetch_activity_GPS(activity_with_gps_id_dict))
+    if strength_activity_id_dict:
+        write_points_to_influxdb(get_strength_training_data(strength_activity_id_dict))
+
+
+# Dispatch table replacing what used to be a 45-line hardcoded if-chain in
+# daily_fetch_write. Every entry is a uniform `date_str -> None` callable
+# that does its own write_points_to_influxdb call(s) -- 'activity' needs
+# three separate writes (summary/GPS/strength), not the "one function
+# returns points, caller writes them" shape everything else has, so it gets
+# its own named handler above instead of being forced into a lambda.
+#
+# Order matters here and is preserved exactly from the original if-chain
+# (dict iteration order = insertion order in Python 3.7+): 'activity' sits
+# between 'hydration' and 'solar_intensity', not after everything else.
+DAILY_METRIC_HANDLERS = {
+    'daily_avg': lambda date_str: write_points_to_influxdb(get_daily_stats(date_str)),
+    'sleep': lambda date_str: write_points_to_influxdb(get_sleep_data(date_str)),
+    'steps': lambda date_str: write_points_to_influxdb(get_intraday_steps(date_str)),
+    'heartrate': lambda date_str: write_points_to_influxdb(get_intraday_hr(date_str)),
+    'stress': lambda date_str: write_points_to_influxdb(get_intraday_stress(date_str)),
+    'breathing': lambda date_str: write_points_to_influxdb(get_intraday_br(date_str)),
+    'hrv': lambda date_str: write_points_to_influxdb(get_intraday_hrv(date_str)),
+    'fitness_age': lambda date_str: write_points_to_influxdb(get_fitness_age(date_str)),
+    'vo2': lambda date_str: write_points_to_influxdb(get_vo2_max(date_str)),
+    'race_prediction': lambda date_str: write_points_to_influxdb(get_race_predictions(date_str)),
+    'body_composition': lambda date_str: write_points_to_influxdb(get_body_composition(date_str)),
+    'lactate_threshold': lambda date_str: write_points_to_influxdb(get_lactate_threshold(date_str)),
+    'training_status': lambda date_str: write_points_to_influxdb(get_training_status(date_str)),
+    'training_readiness': lambda date_str: write_points_to_influxdb(get_training_readiness(date_str)),
+    'hill_score': lambda date_str: write_points_to_influxdb(get_hillscore(date_str)),
+    'endurance_score': lambda date_str: write_points_to_influxdb(get_endurance_score(date_str)),
+    'blood_pressure': lambda date_str: write_points_to_influxdb(get_blood_pressure(date_str)),
+    'hydration': lambda date_str: write_points_to_influxdb(get_hydration(date_str)),
+    'activity': _fetch_and_write_activity,
+    'solar_intensity': lambda date_str: write_points_to_influxdb(get_solar_intensity(date_str)),
+    'lifestyle': lambda date_str: write_points_to_influxdb(get_lifestyle_data(date_str)),
+}
+
+
 def daily_fetch_write(date_str):
     if REQUEST_INTRADAY_DATA_REFRESH and (datetime.strptime(date_str, "%Y-%m-%d") <= (datetime.today() - timedelta(days=IGNORE_INTRADAY_DATA_REFRESH_DAYS))):
         data_refresh_response = garmin_obj.connectapi(f"wellness-service/wellness/epoch/request/{date_str}", method="POST").get("status", "Unknown")
@@ -1558,52 +1579,9 @@ def daily_fetch_write(date_str):
         else:
             logging.info(f"Refresh response is unknown!")
             time.sleep(5)
-    if 'daily_avg' in FETCH_SELECTION:
-        write_points_to_influxdb(get_daily_stats(date_str))
-    if 'sleep' in FETCH_SELECTION:
-        write_points_to_influxdb(get_sleep_data(date_str))
-    if 'steps' in FETCH_SELECTION:
-        write_points_to_influxdb(get_intraday_steps(date_str))
-    if 'heartrate' in FETCH_SELECTION:
-        write_points_to_influxdb(get_intraday_hr(date_str))
-    if 'stress' in FETCH_SELECTION:
-        write_points_to_influxdb(get_intraday_stress(date_str))
-    if 'breathing' in FETCH_SELECTION:
-        write_points_to_influxdb(get_intraday_br(date_str))
-    if 'hrv' in FETCH_SELECTION:
-        write_points_to_influxdb(get_intraday_hrv(date_str))
-    if 'fitness_age' in FETCH_SELECTION:
-        write_points_to_influxdb(get_fitness_age(date_str))
-    if 'vo2' in FETCH_SELECTION:
-        write_points_to_influxdb(get_vo2_max(date_str))
-    if 'race_prediction' in FETCH_SELECTION:
-        write_points_to_influxdb(get_race_predictions(date_str))
-    if 'body_composition' in FETCH_SELECTION:
-        write_points_to_influxdb(get_body_composition(date_str))
-    if 'lactate_threshold' in FETCH_SELECTION:
-        write_points_to_influxdb(get_lactate_threshold(date_str))
-    if 'training_status' in FETCH_SELECTION:
-        write_points_to_influxdb(get_training_status(date_str))
-    if 'training_readiness' in FETCH_SELECTION:
-        write_points_to_influxdb(get_training_readiness(date_str))
-    if 'hill_score' in FETCH_SELECTION:
-        write_points_to_influxdb(get_hillscore(date_str))
-    if 'endurance_score' in FETCH_SELECTION:
-        write_points_to_influxdb(get_endurance_score(date_str))
-    if 'blood_pressure' in FETCH_SELECTION:
-        write_points_to_influxdb(get_blood_pressure(date_str))
-    if 'hydration' in FETCH_SELECTION:
-        write_points_to_influxdb(get_hydration(date_str))
-    if 'activity' in FETCH_SELECTION:
-        activity_summary_points_list, activity_with_gps_id_dict, strength_activity_id_dict = get_activity_summary(date_str)
-        write_points_to_influxdb(activity_summary_points_list)
-        write_points_to_influxdb(fetch_activity_GPS(activity_with_gps_id_dict))
-        if strength_activity_id_dict:
-            write_points_to_influxdb(get_strength_training_data(strength_activity_id_dict))
-    if 'solar_intensity' in FETCH_SELECTION:
-        write_points_to_influxdb(get_solar_intensity(date_str))
-    if 'lifestyle' in FETCH_SELECTION:
-        write_points_to_influxdb(get_lifestyle_data(date_str))
+    for key, handler in DAILY_METRIC_HANDLERS.items():
+        if key in FETCH_SELECTION:
+            handler(date_str)
 
 
 # %%
