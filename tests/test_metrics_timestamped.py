@@ -64,6 +64,17 @@ def test_lactate_threshold_exact_point_shape(garmin_fetch_module):
     then FTP_SPORTS's). Written to expect the post-cycling-FTP four-endpoint
     shape already (confirmed failing against the running-only
     three-endpoint implementation before that change landed).
+
+    Real, live-verified bug (found via a Grafana panel showing an
+    implausible ~43 min/km pace, confirmed against the athlete's actual
+    Garmin Connect display): the lactateThresholdSpeed endpoint's raw
+    "value" is *not* true m/s -- it's off by a factor of 10 from real m/s
+    (0.3888878 raw vs. a real, Garmin-Connect-confirmed ~4:1x/km pace,
+    i.e. ~3.89 m/s). HeartRateThreshold/PowerThreshold need no such
+    correction -- both matched real expectations at face value. So only
+    the SpeedThreshold_* field gets the x10 correction, applied once here
+    at ingestion so every downstream consumer (Grafana, InfluxQL) sees
+    real m/s, not the raw API's mis-scaled value.
     """
     points = garmin_fetch_module.get_lactate_threshold(DATE_STR)
     assert points == [
@@ -71,7 +82,7 @@ def test_lactate_threshold_exact_point_shape(garmin_fetch_module):
             "measurement": "LactateThreshold",
             "time": LACTATE_THRESHOLD_EXPECTED_TIME,
             "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
-            "fields": {"SpeedThreshold_RUNNING": 165},
+            "fields": {"SpeedThreshold_RUNNING": 1650},
         },
         {
             "measurement": "LactateThreshold",

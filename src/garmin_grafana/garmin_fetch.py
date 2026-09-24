@@ -1143,6 +1143,14 @@ def get_lactate_threshold(date_str):
             for lt_dict in lt_list_all:
                 value = lt_dict.get("value")
                 if value is not None:
+                    # lactateThresholdSpeed's raw "value" is not true m/s --
+                    # confirmed live against the real Garmin Connect display
+                    # (0.3888878 raw vs. a real ~4:1x/km pace, i.e. ~3.89
+                    # m/s): off by a factor of 10. HeartRateThreshold and
+                    # PowerThreshold need no such correction, both already
+                    # match real expectations at face value.
+                    if label.startswith("SpeedThreshold_"):
+                        value = value * 10
                     timestamp = datetime.fromtimestamp(datetime.strptime(date_str, "%Y-%m-%d").timestamp(), tz=pytz.timezone("UTC"))
                     points_list.extend(build_timestamped_point(
                         "LactateThreshold", timestamp, {f"{label}": value},
