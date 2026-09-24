@@ -14142,9 +14142,29 @@
               }
             ]
           },
-          "unit": "velocityms"
+          "unit": "dthms"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "time/km"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dthms"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "light-blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 9,
@@ -14216,8 +14236,63 @@
           "tz": "$TimeZone"
         }
       ],
-      "title": "Lactate Threshold Speed (Running)",
-      "type": "timeseries"
+      "title": "Lactate Threshold Pace (Running)",
+      "type": "timeseries",
+      "transformations": [
+        {
+          "id": "filterByValue",
+          "options": {
+            "filters": [
+              {
+                "config": {
+                  "id": "greater",
+                  "options": {
+                    "value": 0
+                  }
+                },
+                "fieldName": "Speed Threshold"
+              }
+            ],
+            "match": "all",
+            "type": "include"
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "time/km",
+            "binary": {
+              "left": {
+                "fixed": "1000"
+              },
+              "operator": "/",
+              "right": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Speed Threshold"
+                }
+              }
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            },
+            "replaceFields": true
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "byVariable": false,
+            "include": {
+              "names": [
+                "Time",
+                "time/km"
+              ]
+            }
+          }
+        }
+      ]
     },
     {
       "datasource": {
@@ -15970,6 +16045,6 @@
   "timezone": "browser",
   "title": "Garmin Stats",
   "uid": "feiibsx498gsgb",
-  "version": 218,
+  "version": 219,
   "weekStart": ""
 }
