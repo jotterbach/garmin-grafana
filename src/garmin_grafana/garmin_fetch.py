@@ -1129,7 +1129,77 @@ def get_lactate_threshold(date_str):
                     logging.info(f"Success : Fetching {label} for date {date_str}")
 
     return points_list
-    
+
+
+def get_running_economy(date_str):
+    """
+    /metrics-service/metrics/runningeconomy/daily -- confirmed real via
+    #45's research, a different shape from every other metrics-service
+    endpoint used elsewhere in this file: no /stats suffix, no aggregation
+    param, no sport param (inherently running-only), and 'daily' is a
+    path segment rather than a query value. Only populated on days with a
+    qualifying run -- score/classification are both None most days,
+    naturally handled by build_daily_summary_point's existing
+    all-fields-None guard.
+    """
+    entries = garmin_obj.connectapi(
+        "/metrics-service/metrics/runningeconomy/daily",
+        params={"startDate": date_str, "endDate": date_str},
+    )
+    if not entries:
+        return []
+    entry = entries[0]
+    fields = {
+        "score": entry.get("score"),
+        "classification": entry.get("classification"),
+    }
+    points = build_daily_summary_point(
+        "RunningEconomy", date_str, fields,
+        device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+    )
+    if points:
+        logging.info(f"Success : Fetching Running Economy for date {date_str}")
+    return points
+
+
+def get_cycling_ability(date_str):
+    """
+    /metrics-service/metrics/cycling-ability -- confirmed real via #49's
+    research (previously, wrongly, marked as not exposed by Garmin's API
+    at all -- see #36 for the retraction). Not wrapped by the
+    garminconnect library under any naming variant.
+
+    aggregation MUST be uppercase ("DAILY") for this endpoint specifically
+    -- confirmed live, lowercase returns a 400. Inconsistent with every
+    other metrics-service endpoint in this file, which use lowercase --
+    do not "fix" this to match them.
+    """
+    result = garmin_obj.connectapi(
+        "/metrics-service/metrics/cycling-ability",
+        params={"startDate": date_str, "endDate": date_str, "aggregation": "DAILY"},
+    )
+    entry = (result or {}).get("cyclingAbilitiesMap", {}).get(date_str)
+    if not entry:
+        return []
+    fields = {
+        "aerobicEndurance": entry.get("aerobicEndurance"),
+        "aerobicCapacity": entry.get("aerobicCapacity"),
+        "anaerobicCapacity": entry.get("anaerobicCapacity"),
+        "profileType": entry.get("profileType"),
+        "profileTypeFeedback": entry.get("profileTypeFeedback"),
+        "aerobicEnduranceFeedback": entry.get("aerobicEnduranceFeedback"),
+        "aerobicCapacityFeedback": entry.get("aerobicCapacityFeedback"),
+        "anaerobicCapacityFeedback": entry.get("anaerobicCapacityFeedback"),
+    }
+    points = build_daily_summary_point(
+        "CyclingAbility", date_str, fields,
+        device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+    )
+    if points:
+        logging.info(f"Success : Fetching Cycling Ability for date {date_str}")
+    return points
+
+
 def get_training_status(date_str):
     points_list = []
     ts_list_all = garmin_obj.get_training_status(date_str)
@@ -1437,6 +1507,8 @@ DAILY_METRIC_HANDLERS = {
     'race_prediction': lambda date_str: write_points_to_influxdb(get_race_predictions(date_str)),
     'body_composition': lambda date_str: write_points_to_influxdb(get_body_composition(date_str)),
     'lactate_threshold': lambda date_str: write_points_to_influxdb(get_lactate_threshold(date_str)),
+    'running_economy': lambda date_str: write_points_to_influxdb(get_running_economy(date_str)),
+    'cycling_ability': lambda date_str: write_points_to_influxdb(get_cycling_ability(date_str)),
     'training_status': lambda date_str: write_points_to_influxdb(get_training_status(date_str)),
     'training_readiness': lambda date_str: write_points_to_influxdb(get_training_readiness(date_str)),
     'hill_score': lambda date_str: write_points_to_influxdb(get_hillscore(date_str)),
