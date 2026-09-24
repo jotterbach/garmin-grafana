@@ -72,9 +72,29 @@ def test_message_type_keys_use_mesgs_suffix(decoded_corpus):
         assert "session" not in messages, path.name
 
 
+def _activity_type_from_filename(path):
+    # KEEP_FIT_FILES naming convention: <timestamp>UTC-<activity_type>.fit
+    # -- mirrors test_smoke_full_corpus.py's helper of the same name.
+    return path.stem.split("UTC-", 1)[-1]
+
+
 def test_session_mesgs_is_exactly_one_entry_per_file(decoded_corpus):
+    """
+    Real corpus finding (2026-09-24, via 30 random-sample iterations that
+    each ran clean until sampling happened to include one): multi_sport
+    activities (e.g. a triathlon or brick workout) genuinely have more
+    than one session_mesgs entry, one per sport leg -- this was never a
+    decode_fit or fetch_activity_GPS bug, just an invariant that had
+    never been checked against a real multi-sport file before the corpus
+    grew to include one. "Exactly 1" still holds for every other,
+    single-sport activity type.
+    """
     for path, messages in decoded_corpus.items():
-        assert len(messages["session_mesgs"]) == 1, path.name
+        n = len(messages["session_mesgs"])
+        if _activity_type_from_filename(path) == "multi_sport":
+            assert n > 1, f"{path.name}: expected a multi-sport file to have more than one session_mesgs entry"
+        else:
+            assert n == 1, path.name
 
 
 def test_record_timestamps_are_timezone_aware_utc_and_non_decreasing(decoded_corpus):
