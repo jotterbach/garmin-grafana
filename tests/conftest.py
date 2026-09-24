@@ -32,6 +32,7 @@ accidentally pointed at real ingested health data.
 import io
 import json
 import os
+import random
 import sys
 import time
 import zipfile
@@ -54,11 +55,30 @@ sys.path.insert(0, str(SRC_PACKAGE_DIR))
 # test skips cleanly when the corpus is absent.
 FIT_CORPUS_DIR = Path(os.environ.get("FIT_TEST_CORPUS_DIR", "/ext/garmin-grafana/fit_filestore"))
 
+# The corpus has grown well past its original ~143-file size (593+ as of
+# 2026-09-24, still growing via the ongoing 3-year KEEP_FIT_FILES
+# backfill) -- iterating the whole thing on every local test run got slow
+# enough to actively discourage running these tests while debugging.
+# Default to a random sample for fast local iteration; set
+# FIT_TEST_CORPUS_SAMPLE_SIZE=all (or unset it in CI, where the corpus is
+# absent anyway) to exercise the full corpus before merging a change to
+# the FIT-parsing path. Genuinely random (no fixed seed) is deliberate:
+# different files each run means the sampled subset drifts over repeated
+# local runs, occasionally surfacing a real edge case sooner rather than
+# always exercising the same lucky subset.
+FIT_CORPUS_SAMPLE_SIZE = os.environ.get("FIT_TEST_CORPUS_SAMPLE_SIZE", "25")
+
 
 def real_fit_paths():
     if not FIT_CORPUS_DIR.is_dir():
         return []
-    return sorted(FIT_CORPUS_DIR.glob("*.fit"))
+    paths = sorted(FIT_CORPUS_DIR.glob("*.fit"))
+    if FIT_CORPUS_SAMPLE_SIZE.strip().lower() == "all":
+        return paths
+    sample_size = int(FIT_CORPUS_SAMPLE_SIZE)
+    if sample_size <= 0 or sample_size >= len(paths):
+        return paths
+    return sorted(random.sample(paths, sample_size))
 
 
 class RealFitGarmin:

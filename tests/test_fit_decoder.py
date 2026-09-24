@@ -24,6 +24,7 @@ re-decoding per test function made this suite unreasonably slow.
 """
 
 import datetime
+import logging
 
 import pytest
 
@@ -37,6 +38,11 @@ def decoded_corpus():
     paths = real_fit_paths()
     if not paths:
         pytest.skip(f"no real FIT files found under {FIT_CORPUS_DIR} -- local-only characterization, not a CI gate")
+    # Random sampling (conftest.py's FIT_CORPUS_SAMPLE_SIZE) means this set
+    # drifts between runs -- logged so a failure (each assertion below
+    # already names path.name) can be cross-checked against the full set
+    # actually under test this run.
+    logging.info("Decoding %d real FIT file(s): %s", len(paths), [p.name for p in paths])
     result = {}
     for path in paths:
         with open(path, "rb") as f:
