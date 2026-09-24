@@ -1346,7 +1346,6 @@ def fetch_activity_GPS(activityIDdict):  # Uses FIT file by default, falls back 
 
 
 def get_lactate_threshold(date_str):
-    points_list = []
     endpoints = {}
 
     for ltsport in LACTATE_THRESHOLD_SPORTS:
@@ -1372,6 +1371,7 @@ def get_lactate_threshold(date_str):
             {"aggregation": "daily", "sport": ftpsport},
         )
 
+    fields = {}
     for label, (path, params) in endpoints.items():
         lt_list_all = garmin_obj.connectapi(path, params=params)
         if lt_list_all:
@@ -1386,21 +1386,17 @@ def get_lactate_threshold(date_str):
                     # match real expectations at face value.
                     if label.startswith("SpeedThreshold_"):
                         value = value * 10
-                    timestamp = datetime.fromtimestamp(
-                        datetime.strptime(date_str, "%Y-%m-%d").timestamp(), tz=pytz.timezone("UTC")
-                    )
-                    points_list.extend(
-                        build_timestamped_point(
-                            "LactateThreshold",
-                            timestamp,
-                            {f"{label}": value},
-                            device_name=GARMIN_DEVICENAME,
-                            database_name=INFLUXDB_DATABASE,
-                        )
-                    )
+                    fields[label] = value
                     logging.info(f"Success : Fetching {label} for date {date_str}")
 
-    return points_list
+    points = build_daily_summary_point(
+        "LactateThreshold",
+        date_str,
+        fields,
+        device_name=GARMIN_DEVICENAME,
+        database_name=INFLUXDB_DATABASE,
+    )
+    return points
 
 
 def get_running_economy(date_str):
