@@ -4,7 +4,9 @@ repos:
     hooks:
       - id: ruff
         args: [--select, "E9,F"]
+        exclude: ^Extra/
       - id: ruff-format
+        exclude: ^Extra/
 
   - repo: https://github.com/koalaman/shellcheck-precommit
     rev: v0.10.0
