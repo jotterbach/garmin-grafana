@@ -34,4 +34,4 @@ jobs:
         env:
           TEST_INFLUXDB_HOST: 127.0.0.1
           TEST_INFLUXDB_PORT: 18086
-        run: uv run pytest -v
+        run: uv run pytest -v --cov --cov-report=term-missing
