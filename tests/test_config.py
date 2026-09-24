@@ -25,6 +25,7 @@ def test_defaults_with_empty_env():
     assert config.manual_start_date is None
     assert config.activity_type_filter == []
     assert config.lactate_threshold_sports == ["RUNNING"]
+    assert config.ftp_sports == ["RUNNING", "CYCLING"]
     # Two different default *directions* pre-exist in garmin_fetch.py's
     # original parsing (see config.py's module docstring) -- confirm both
     # survive the extraction correctly.
@@ -86,6 +87,16 @@ def test_activity_type_filter_splits_lowercases_and_strips():
 def test_lactate_threshold_sports_splits_and_uppercases():
     config = Config.from_env({"LACTATE_THRESHOLD_SPORTS": "running,cycling"})
     assert config.lactate_threshold_sports == ["RUNNING", "CYCLING"]
+
+
+def test_ftp_sports_defaults_to_running_and_cycling():
+    config = Config.from_env({})
+    assert config.ftp_sports == ["RUNNING", "CYCLING"]
+
+
+def test_ftp_sports_splits_and_uppercases():
+    config = Config.from_env({"FTP_SPORTS": "running"})
+    assert config.ftp_sports == ["RUNNING"]
 
 
 def test_numeric_fields_parse_as_int():
