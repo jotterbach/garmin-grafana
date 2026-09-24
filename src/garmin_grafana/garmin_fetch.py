@@ -1431,28 +1431,42 @@ DAILY_METRIC_HANDLERS = {
 }
 
 
-def daily_fetch_write(date_str):
-    if REQUEST_INTRADAY_DATA_REFRESH and (datetime.strptime(date_str, "%Y-%m-%d") <= (datetime.today() - timedelta(days=IGNORE_INTRADAY_DATA_REFRESH_DAYS))):
+def _request_intraday_refresh(date_str):
+    """
+    Requests an intraday data refresh from Garmin if REQUEST_INTRADAY_DATA_REFRESH
+    is enabled and date_str is old enough to need it (IGNORE_INTRADAY_DATA_REFRESH_DAYS).
+    Returns False if daily_fetch_write should skip fetching entirely for this
+    date (mirrors the NO_FILES_FOUND early return), True otherwise.
+    """
+    if not (REQUEST_INTRADAY_DATA_REFRESH and (datetime.strptime(date_str, "%Y-%m-%d") <= (datetime.today() - timedelta(days=IGNORE_INTRADAY_DATA_REFRESH_DAYS)))):
+        return True
+
+    data_refresh_response = garmin_obj.connectapi(f"wellness-service/wellness/epoch/request/{date_str}", method="POST").get("status", "Unknown")
+    logging.info(f"Intraday data refresh request status: {data_refresh_response}")
+    if data_refresh_response == "SUBMITTED":
+        logging.info(f"Waiting 10 seconds for refresh request to process...")
+        time.sleep(10)
+    elif data_refresh_response == "COMPLETE":
+        logging.info(f"Data for date {date_str} is already available")
+    elif data_refresh_response == "NO_FILES_FOUND":
+        logging.info(f"No Data is available for date {date_str} to refresh")
+        return False
+    elif data_refresh_response == "DENIED":
+        logging.info(f"Daily refresh limit reached. Pausing script for 24 hours to ensure Intraday data fetching. Disable REQUEST_INTRADAY_DATA_REFRESH to avoid this!")
+        time.sleep(86500)
         data_refresh_response = garmin_obj.connectapi(f"wellness-service/wellness/epoch/request/{date_str}", method="POST").get("status", "Unknown")
         logging.info(f"Intraday data refresh request status: {data_refresh_response}")
-        if data_refresh_response == "SUBMITTED":
-            logging.info(f"Waiting 10 seconds for refresh request to process...")
-            time.sleep(10)
-        elif data_refresh_response == "COMPLETE":
-            logging.info(f"Data for date {date_str} is already available")
-        elif data_refresh_response == "NO_FILES_FOUND":
-            logging.info(f"No Data is available for date {date_str} to refresh")
-            return None
-        elif data_refresh_response == "DENIED":
-            logging.info(f"Daily refresh limit reached. Pausing script for 24 hours to ensure Intraday data fetching. Disable REQUEST_INTRADAY_DATA_REFRESH to avoid this!")
-            time.sleep(86500)
-            data_refresh_response = garmin_obj.connectapi(f"wellness-service/wellness/epoch/request/{date_str}", method="POST").get("status", "Unknown")
-            logging.info(f"Intraday data refresh request status: {data_refresh_response}")
-            logging.info(f"Waiting 10 seconds...")
-            time.sleep(10)
-        else:
-            logging.info(f"Refresh response is unknown!")
-            time.sleep(5)
+        logging.info(f"Waiting 10 seconds...")
+        time.sleep(10)
+    else:
+        logging.info(f"Refresh response is unknown!")
+        time.sleep(5)
+    return True
+
+
+def daily_fetch_write(date_str):
+    if not _request_intraday_refresh(date_str):
+        return None
     for key, handler in DAILY_METRIC_HANDLERS.items():
         if key in FETCH_SELECTION:
             handler(date_str)
