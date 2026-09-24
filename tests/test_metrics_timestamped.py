@@ -75,6 +75,34 @@ def test_lactate_threshold_exact_point_shape(garmin_fetch_module):
     ]
 
 
+def test_lactate_threshold_passes_query_params_separately_not_embedded_in_path(
+    garmin_fetch_module,
+):
+    """
+    Regression guard: garminconnect 0.3.16 added strict path validation to
+    connectapi() that rejects a literal '?' in the path -- callers must pass
+    query params via the params= kwarg instead. get_lactate_threshold used
+    to build f"{path}?aggregation=daily&sport={sport}" directly, which broke
+    under 0.3.16 (confirmed live against the real API before this fix).
+    Asserts the actual call shape, not just that it doesn't crash against
+    FakeGarmin (which never validated this either way).
+    """
+    calls = []
+
+    def fake_connectapi(endpoint, method="GET", params=None):
+        calls.append((endpoint, params))
+        return []
+
+    garmin_fetch_module.garmin_obj.connectapi = fake_connectapi
+
+    garmin_fetch_module.get_lactate_threshold(DATE_STR)
+
+    assert calls, "expected at least one connectapi call"
+    for endpoint, params in calls:
+        assert "?" not in endpoint, f"query string embedded in path: {endpoint!r}"
+        assert params == {"aggregation": "daily", "sport": "RUNNING"}
+
+
 def test_training_status_exact_point_shape(garmin_fetch_module):
     points = garmin_fetch_module.get_training_status(DATE_STR)
     assert points == [

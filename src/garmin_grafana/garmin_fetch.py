@@ -1092,13 +1092,18 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
 def get_lactate_threshold(date_str):
     points_list = []
     endpoints = {}
-    
-    for ltsport in LACTATE_THRESHOLD_SPORTS:
-        endpoints[f"SpeedThreshold_{ltsport}"] = f"/biometric-service/stats/lactateThresholdSpeed/range/{date_str}/{date_str}?aggregation=daily&sport={ltsport}"
-        endpoints[f"HeartRateThreshold_{ltsport}"] = f"/biometric-service/stats/lactateThresholdHeartRate/range/{date_str}/{date_str}?aggregation=daily&sport={ltsport}"
 
-    for label, endpoint in endpoints.items():
-        lt_list_all = garmin_obj.connectapi(endpoint)
+    for ltsport in LACTATE_THRESHOLD_SPORTS:
+        params = {"aggregation": "daily", "sport": ltsport}
+        endpoints[f"SpeedThreshold_{ltsport}"] = (
+            f"/biometric-service/stats/lactateThresholdSpeed/range/{date_str}/{date_str}", params,
+        )
+        endpoints[f"HeartRateThreshold_{ltsport}"] = (
+            f"/biometric-service/stats/lactateThresholdHeartRate/range/{date_str}/{date_str}", params,
+        )
+
+    for label, (path, params) in endpoints.items():
+        lt_list_all = garmin_obj.connectapi(path, params=params)
         if lt_list_all:
             for lt_dict in lt_list_all:
                 value = lt_dict.get("value")

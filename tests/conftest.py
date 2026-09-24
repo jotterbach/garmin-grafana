@@ -206,7 +206,7 @@ class FakeGarmin:
     def get_device_solar_data(self, device_id, date_str):
         return self._daily["solar_intensity"]
 
-    def connectapi(self, endpoint, method="GET"):
+    def connectapi(self, endpoint, method="GET", params=None):
         return [self._daily["lactate_threshold_value"]]
 
     def get_device_last_used(self):
