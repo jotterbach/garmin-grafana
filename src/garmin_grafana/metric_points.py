@@ -9,10 +9,10 @@ isolation (see tests/test_metric_points.py).
 
 Phase 1 covers the "single daily-summary point" shape
 (build_daily_summary_point -- get_hillscore, get_race_predictions,
-get_fitness_age, get_vo2_max, get_endurance_score, get_hydration). Phase 2
-adds the "multi-point-per-day, real API timestamp" shape
-(build_timestamped_point -- get_training_readiness, get_blood_pressure,
-get_training_status, get_solar_intensity, get_lactate_threshold). Both
+get_fitness_age, get_vo2_max, get_endurance_score, get_hydration,
+get_lactate_threshold as of #18). Phase 2 adds the "multi-point-per-day,
+real API timestamp" shape (build_timestamped_point -- get_training_readiness,
+get_blood_pressure, get_training_status, get_solar_intensity). Both
 verified precisely by reading each function's body, not assumed. Other
 shapes (intraday arrays, activity/GPS, sleep, strength training, etc.) are
 deliberately out of scope for this module for now.
@@ -70,12 +70,12 @@ def build_timestamped_point(
     """
     Single point at a caller-computed, arbitrary timestamp -- unlike
     build_daily_summary_point, not tied to date_str's midnight. Shared by
-    get_training_readiness, get_blood_pressure, get_training_status,
-    get_solar_intensity, and get_lactate_threshold, each of which computes
-    its own timestamp differently (real API epoch-ms, real API ISO string,
-    or a date-derived value) -- deliberately not unified here, since that
-    computation is exactly what those functions already get right today and
-    isn't part of what's duplicated across them.
+    get_training_readiness, get_blood_pressure, get_training_status, and
+    get_solar_intensity, each of which computes its own timestamp
+    differently (real API epoch-ms or real API ISO string) --
+    deliberately not unified here, since that computation is exactly what
+    those functions already get right today and isn't part of what's
+    duplicated across them.
 
     `timestamp` may be a pre-formatted string (used as-is) or any object
     with `.isoformat()` (e.g. a datetime). Same "[] if all fields are None,

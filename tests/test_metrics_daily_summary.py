@@ -133,6 +133,77 @@ def test_hydration_exact_point_shape(garmin_fetch_module):
     ]
 
 
+def test_lactate_threshold_exact_point_shape(garmin_fetch_module):
+    """
+    #18: get_lactate_threshold used to compute its own timestamp via
+    datetime.fromtimestamp(datetime.strptime(date_str, ...).timestamp(),
+    tz=UTC) -- a round-trip through .timestamp() that interprets the naive
+    datetime as being in the *system's local timezone* before relabeling
+    it UTC, only actually correct because the container happens to run
+    with tz=UTC set. Moved onto build_daily_summary_point (same
+    timezone-safe midnight computation as get_hillscore/get_hydration/
+    etc.) instead, which also merges what used to be up to 4 separate
+    single-field points (one per endpoint, all sharing the same day) into
+    the single multi-field point this measurement actually represents --
+    LactateThreshold is a daily-summary shape, not an arbitrary-timestamp
+    one.
+
+    Default LACTATE_THRESHOLD_SPORTS is a single sport ("RUNNING"), used
+    for speed/heart-rate threshold; default FTP_SPORTS is
+    ("RUNNING", "CYCLING") -- a deliberately separate, broader sport list,
+    since FTP applies to cycling too but lactateThresholdSpeed/HeartRate
+    don't (see #22). FakeGarmin.connectapi returns the same canned value
+    for all four endpoint calls.
+    """
+    points = garmin_fetch_module.get_lactate_threshold(DATE_STR)
+    assert points == [
+        {
+            "measurement": "LactateThreshold",
+            "time": "2026-01-15T00:00:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {
+                # x10: lactateThresholdSpeed's raw "value" is not true
+                # m/s, confirmed live against the athlete's real Garmin
+                # Connect display (0.3888878 raw vs. a real ~4:1x/km
+                # pace) -- see garmin_fetch.py's get_lactate_threshold.
+                "SpeedThreshold_RUNNING": 1650,
+                "HeartRateThreshold_RUNNING": 165,
+                "PowerThreshold_RUNNING": 165,
+                "PowerThreshold_CYCLING": 165,
+            },
+        }
+    ]
+
+
+def test_lactate_threshold_passes_query_params_separately_not_embedded_in_path(
+    garmin_fetch_module,
+):
+    """
+    Regression guard: garminconnect 0.3.16 added strict path validation to
+    connectapi() that rejects a literal '?' in the path -- callers must pass
+    query params via the params= kwarg instead. get_lactate_threshold used
+    to build f"{path}?aggregation=daily&sport={sport}" directly, which broke
+    under 0.3.16 (confirmed live against the real API before this fix).
+    Asserts the actual call shape, not just that it doesn't crash against
+    FakeGarmin (which never validated this either way).
+    """
+    calls = []
+
+    def fake_connectapi(endpoint, method="GET", params=None):
+        calls.append((endpoint, params))
+        return []
+
+    garmin_fetch_module.garmin_obj.connectapi = fake_connectapi
+
+    garmin_fetch_module.get_lactate_threshold(DATE_STR)
+
+    assert calls, "expected at least one connectapi call"
+    for endpoint, params in calls:
+        assert "?" not in endpoint, f"query string embedded in path: {endpoint!r}"
+        assert params["aggregation"] == "daily"
+        assert params["sport"] in ("RUNNING", "CYCLING")
+
+
 def test_daily_fetch_write_respects_custom_fetch_selection_subset(garmin_fetch_module, monkeypatch):
     """
     Narrower than test_smoke_pipeline.py's test_daily_fetch_write_end_to_end
