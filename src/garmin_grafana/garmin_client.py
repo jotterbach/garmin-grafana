@@ -52,7 +52,7 @@ def _prompt_mfa() -> str:
 def garmin_login(config: Config) -> Garmin:
     token_store_expanded = os.path.expanduser(config.token_dir)
     token_store = token_store_expanded
-    if os.path.isfile(token_store_expanded) and (not token_store_expanded.endswith('.json')):
+    if os.path.isfile(token_store_expanded) and (not token_store_expanded.endswith(".json")):
         # New native client treats non-.json token paths as directories.
         # If a legacy file exists at this path, use a dedicated directory instead.
         token_store = token_store_expanded + "_tokens"
@@ -69,18 +69,28 @@ def garmin_login(config: Config) -> Garmin:
         logging.info("Login to Garmin Connect successful using stored session tokens.")
 
     except (FileNotFoundError, GarminConnectAuthenticationError, GarminConnectConnectionError):
-        logging.warning("Session is expired or login information not present/incorrect. You'll need to log in again...login with your Garmin Connect credentials to generate them.")
+        logging.warning(
+            "Session is expired or login information not present/incorrect. You'll need to log in again...login with your Garmin Connect credentials to generate them."
+        )
         try:
-            user_email = (config.garminconnect_email or "").strip() or input("Enter Garminconnect Login e-mail: ").strip()
-            user_password = (config.garminconnect_password or "").strip() or input("Enter Garminconnect password (characters will be visible): ").strip()
+            user_email = (config.garminconnect_email or "").strip() or input(
+                "Enter Garminconnect Login e-mail: "
+            ).strip()
+            user_password = (config.garminconnect_password or "").strip() or input(
+                "Enter Garminconnect password (characters will be visible): "
+            ).strip()
             garmin = Garmin(
-                email=user_email, password=user_password, is_cn=config.garminconnect_is_cn,
+                email=user_email,
+                password=user_password,
+                is_cn=config.garminconnect_is_cn,
                 prompt_mfa=_prompt_mfa,
             )
             garmin.login(token_store)
 
             logging.info(f"Oauth tokens stored in '{token_store}' for future use")
-            logging.info("login to Garmin Connect successful using credentials and MFA (if enabled). Continuing with current run")
+            logging.info(
+                "login to Garmin Connect successful using credentials and MFA (if enabled). Continuing with current run"
+            )
 
         except (
             FileNotFoundError,

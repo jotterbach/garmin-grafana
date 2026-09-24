@@ -55,8 +55,7 @@ def test_sleep_movement_exact_point_shape(garmin_fetch_module):
     to a float one -- see the fixture-prep commit for why)."""
     points = garmin_fetch_module.get_sleep_data(DATE_STR)
     movement_points = [
-        p for p in points
-        if p["measurement"] == "SleepIntraday" and "SleepMovementActivityLevel" in p["fields"]
+        p for p in points if p["measurement"] == "SleepIntraday" and "SleepMovementActivityLevel" in p["fields"]
     ]
     assert movement_points == [
         {

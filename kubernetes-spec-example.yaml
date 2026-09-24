@@ -1,4 +1,4 @@
-# There is support for influxdb v3 (core) OSS, but it's highly recommended to use Influxdb 1.x versions with this project. 
+# There is support for influxdb v3 (core) OSS, but it's highly recommended to use Influxdb 1.x versions with this project.
 
 apiVersion: v1
 kind: Secret

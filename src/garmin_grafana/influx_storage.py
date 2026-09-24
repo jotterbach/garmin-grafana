@@ -54,9 +54,7 @@ class InfluxStorage:
         """
         demo_point = {
             "measurement": "DemoPoint",
-            "time": (datetime.now(pytz.utc) - timedelta(minutes=1)).isoformat(
-                timespec="seconds"
-            ),
+            "time": (datetime.now(pytz.utc) - timedelta(minutes=1)).isoformat(timespec="seconds"),
             "tags": {"DemoTag": "DemoTagValue"},
             "fields": {"DemoField": 0},
         }
@@ -99,7 +97,5 @@ class InfluxStorage:
         purge_existing_strength_exercise_sets, which already guards this
         with its own InfluxDB-version check before ever calling this)."""
         if self.version != "1":
-            raise NotImplementedError(
-                f"delete_series is not supported on InfluxDB v{self.version}"
-            )
+            raise NotImplementedError(f"delete_series is not supported on InfluxDB v{self.version}")
         self._client.delete_series(measurement=measurement, tags=dict(tags))

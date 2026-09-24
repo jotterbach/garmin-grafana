@@ -7,7 +7,7 @@ import hashlib
 import zipfile
 
 from fit_decoder import FitDecodeError, decode_fit
-from datetime import datetime, timezone, timedelta
+from datetime import timezone, timedelta
 from typing import List, Dict, Any
 from pathlib import Path
 from io import BytesIO
@@ -28,7 +28,6 @@ def get_fit_activity_summary(fit_messages: Dict[str, List[Dict[str, Any]]]) -> L
 
     file_data = (fit_messages.get("file_id_mesgs") or [{}])[0]
     session_data = (fit_messages.get("session_mesgs") or [{}])[0]
-    activity_data = (fit_messages.get("activity_mesgs") or [{}])[0]
 
     # Create an actitivy id based on the md5sum hash of file metadata.
     serialized = json.dumps(
@@ -119,9 +118,7 @@ class MockGarminObject:
 
         zip_buffer = BytesIO()
 
-        with zipfile.ZipFile(
-            zip_buffer, mode="w", compression=zipfile.ZIP_DEFLATED
-        ) as zf:
+        with zipfile.ZipFile(zip_buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
             zf.write(
                 filename=file_path,
                 arcname=file_path.name.lower(),
@@ -159,9 +156,7 @@ if __name__ == "__main__":
     except FitDecodeError as e:
         raise RuntimeError(f"Failed to parse FIT file: {e}")
 
-    activity_id, activity_type, start_point, end_point = get_fit_activity_summary(
-        fit_messages
-    )
+    activity_id, activity_type, start_point, end_point = get_fit_activity_summary(fit_messages)
 
     # Override the garmin_obj to return the fit file we want to import.
     garmin_fetch.garmin_obj = MockGarminObject(fit_path)

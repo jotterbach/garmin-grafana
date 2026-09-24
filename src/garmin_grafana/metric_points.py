@@ -51,9 +51,7 @@ def build_daily_summary_point(
     return [
         {
             "measurement": measurement,
-            "time": datetime.strptime(date_str, "%Y-%m-%d")
-            .replace(hour=0, tzinfo=pytz.UTC)
-            .isoformat(),
+            "time": datetime.strptime(date_str, "%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(),
             "tags": tags,
             "fields": fields,
         }

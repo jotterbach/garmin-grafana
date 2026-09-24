@@ -9,3 +9,5 @@ on:
 jobs:
   test:
     uses: ./.github/workflows/_run-tests.yml
+  pre-commit:
+    uses: ./.github/workflows/_run-pre-commit.yml

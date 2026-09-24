@@ -51,9 +51,7 @@ def running_file():
 
 
 def test_get_fit_activity_summary_produces_expected_point_shapes(running_file):
-    activity_id, activity_type, start_point, end_point = get_fit_activity_summary(
-        _load_fit_input(running_file)
-    )
+    activity_id, activity_type, start_point, end_point = get_fit_activity_summary(_load_fit_input(running_file))
 
     assert isinstance(activity_id, int) and activity_id > 0
     assert isinstance(activity_type, str) and activity_type == "running"
@@ -94,6 +92,4 @@ def test_device_tag_uses_resolved_product_name(running_file):
 
     device = start_point["tags"]["Device"]
     assert isinstance(device, str)
-    assert not device.isdigit(), (
-        f"expected a resolved device name string, got a raw numeric code: {device!r}"
-    )
+    assert not device.isdigit(), f"expected a resolved device name string, got a raw numeric code: {device!r}"

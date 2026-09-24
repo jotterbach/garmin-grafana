@@ -1,0 +1,17 @@
+name: Run pre-commit checks
+
+on:
+  workflow_call:
+
+jobs:
+  pre-commit:
+    name: Lint / format / shellcheck / yamllint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: pre-commit/action@v3.0.1

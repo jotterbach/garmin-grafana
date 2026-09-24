@@ -57,10 +57,7 @@ def test_keep_fit_files_overridden_truthy():
 
 
 def test_force_reprocess_activities_overridden_falsy():
-    assert (
-        Config.from_env({"FORCE_REPROCESS_ACTIVITIES": "no"}).force_reprocess_activities
-        is False
-    )
+    assert Config.from_env({"FORCE_REPROCESS_ACTIVITIES": "no"}).force_reprocess_activities is False
 
 
 def test_garminconnect_base64_password_is_decoded():

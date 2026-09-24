@@ -52,9 +52,7 @@ sys.path.insert(0, str(SRC_PACKAGE_DIR))
 # personal health data), so this directory won't exist in CI. Shared by
 # every test module that characterizes real-FIT-file parsing; each such
 # test skips cleanly when the corpus is absent.
-FIT_CORPUS_DIR = Path(
-    os.environ.get("FIT_TEST_CORPUS_DIR", "/ext/garmin-grafana/fit_filestore")
-)
+FIT_CORPUS_DIR = Path(os.environ.get("FIT_TEST_CORPUS_DIR", "/ext/garmin-grafana/fit_filestore"))
 
 
 def real_fit_paths():
@@ -85,6 +83,7 @@ class RealFitGarmin:
             zf.write(self._fit_path, arcname=self._fit_path.name)
         return buf.getvalue()
 
+
 TEST_INFLUXDB_HOST = os.environ.get("TEST_INFLUXDB_HOST", "127.0.0.1")
 TEST_INFLUXDB_PORT = int(os.environ.get("TEST_INFLUXDB_PORT", "18086"))
 TEST_INFLUXDB_DATABASE = "SmokeTestDB"
@@ -102,9 +101,7 @@ os.environ.setdefault("TOKEN_DIR", "/tmp/garmin-grafana-test-tokens-unused")
 # Make sure the test database exists before garmin_fetch's module-level
 # import-time write can run. Retries because in CI the influxdb service
 # container may not have finished starting the instant pytest does.
-_admin_client = InfluxDBClient(
-    host=TEST_INFLUXDB_HOST, port=TEST_INFLUXDB_PORT, username="root", password="root"
-)
+_admin_client = InfluxDBClient(host=TEST_INFLUXDB_HOST, port=TEST_INFLUXDB_PORT, username="root", password="root")
 _deadline = time.time() + 30
 while True:
     try:

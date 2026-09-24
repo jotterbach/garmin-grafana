@@ -23,3 +23,16 @@ test = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+# Deliberately conservative (#12): pyflakes (F) catches real bugs --
+# unused imports/variables, undefined names, f-strings with no
+# placeholders. E9 is syntax errors. Ruff's much larger default/plugin
+# rule set (datetime-timezone conventions, logging conventions, etc.)
+# would flag hundreds of pre-existing, working, unrelated-to-this-ticket
+# patterns across the codebase -- out of scope for "add lint tooling".
+select = ["E9", "F"]

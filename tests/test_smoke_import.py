@@ -34,10 +34,7 @@ def _import_garmin_fetch(env):
 
 def test_module_imports_cleanly_against_reachable_influxdb():
     result = _import_garmin_fetch(os.environ.copy())
-    assert result.returncode == 0, (
-        f"importing garmin_fetch failed:\nstdout:\n{result.stdout}\n"
-        f"stderr:\n{result.stderr}"
-    )
+    assert result.returncode == 0, f"importing garmin_fetch failed:\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
 
 
 def test_module_imports_cleanly_even_with_unreachable_influxdb():

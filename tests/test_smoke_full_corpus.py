@@ -36,9 +36,7 @@ def _activity_type_from_filename(path):
 def test_full_corpus_dry_run_no_errors_and_nothing_persisted(garmin_fetch_module):
     paths = real_fit_paths()
     if not paths:
-        pytest.skip(
-            "no real FIT corpus found locally -- integration smoke test, not a CI gate"
-        )
+        pytest.skip("no real FIT corpus found locally -- integration smoke test, not a CI gate")
 
     original_fetch_selection = garmin_fetch_module.FETCH_SELECTION
     original_garmin_obj = garmin_fetch_module.garmin_obj
@@ -61,9 +59,7 @@ def test_full_corpus_dry_run_no_errors_and_nothing_persisted(garmin_fetch_module
                 continue
 
             for p in points:
-                measurement_counts[p["measurement"]] = (
-                    measurement_counts.get(p["measurement"], 0) + 1
-                )
+                measurement_counts[p["measurement"]] = measurement_counts.get(p["measurement"], 0) + 1
             # Never call write_points_to_influxdb -- this is the whole point
             # of a dry run: exercise real parsing/point-building, persist
             # nothing.
@@ -91,6 +87,4 @@ def test_full_corpus_dry_run_no_errors_and_nothing_persisted(garmin_fetch_module
     storage = garmin_fetch_module.INFLUXDB_STORAGE
     for measurement in measurement_counts:
         result = storage.query(f'SELECT * FROM "{measurement}"')
-        assert not result, (
-            f"expected zero persisted {measurement} points from a dry run, found some"
-        )
+        assert not result, f"expected zero persisted {measurement} points from a dry run, found some"

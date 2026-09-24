@@ -76,8 +76,7 @@ class Config:
 
     def __post_init__(self):
         assert self.influxdb_version in ("1", "3"), (
-            "Only InfluxDB version 1 or 3 is allowed - please ensure to set "
-            "this value to either 1 or 3"
+            "Only InfluxDB version 1 or 3 is allowed - please ensure to set this value to either 1 or 3"
         )
 
     @classmethod
@@ -86,11 +85,7 @@ class Config:
 
         garminconnect_email = (env.get("GARMINCONNECT_EMAIL") or "").strip() or None
         garmin_pw_b64 = env.get("GARMINCONNECT_BASE64_PASSWORD")
-        garminconnect_password = (
-            base64.b64decode(garmin_pw_b64).decode("utf-8").strip()
-            if garmin_pw_b64
-            else None
-        )
+        garminconnect_password = base64.b64decode(garmin_pw_b64).decode("utf-8").strip() if garmin_pw_b64 else None
         garmin_devicename = env.get("GARMIN_DEVICENAME", "Unknown")
 
         return cls(
@@ -102,9 +97,7 @@ class Config:
             influxdb_database=env.get("INFLUXDB_DATABASE", "GarminStats"),
             influxdb_v3_access_token=env.get("INFLUXDB_V3_ACCESS_TOKEN", ""),
             influxdb_org=env.get("INFLUXDB_ORG", "default"),
-            influxdb_endpoint_is_http=_env_bool(
-                env.get("INFLUXDB_ENDPOINT_IS_HTTP"), default=True
-            ),
+            influxdb_endpoint_is_http=_env_bool(env.get("INFLUXDB_ENDPOINT_IS_HTTP"), default=True),
             token_dir=env.get("TOKEN_DIR", "~/.garminconnect"),
             garminconnect_email=garminconnect_email,
             garminconnect_password=garminconnect_password,
@@ -114,9 +107,7 @@ class Config:
             garmin_deviceid=env.get("GARMIN_DEVICEID", None),
             auto_date_range=_env_bool(env.get("AUTO_DATE_RANGE"), default=True),
             manual_start_date=env.get("MANUAL_START_DATE", None),
-            manual_end_date=env.get(
-                "MANUAL_END_DATE", datetime.today().strftime("%Y-%m-%d")
-            ),
+            manual_end_date=env.get("MANUAL_END_DATE", datetime.today().strftime("%Y-%m-%d")),
             log_level=env.get("LOG_LEVEL", "INFO"),
             fetch_failed_wait_seconds=int(env.get("FETCH_FAILED_WAIT_SECONDS", 1800)),
             rate_limit_calls_seconds=int(env.get("RATE_LIMIT_CALLS_SECONDS", 5)),
@@ -128,42 +119,26 @@ class Config:
                 "fitness_age,vo2,activity,race_prediction,body_composition,lifestyle",
             ),
             activity_type_filter=[
-                t.strip().lower()
-                for t in env.get("ACTIVITY_TYPE_FILTER", "").split(",")
-                if t.strip()
+                t.strip().lower() for t in env.get("ACTIVITY_TYPE_FILTER", "").split(",") if t.strip()
             ],
-            lactate_threshold_sports=env.get("LACTATE_THRESHOLD_SPORTS", "RUNNING")
-            .upper()
-            .split(","),
+            lactate_threshold_sports=env.get("LACTATE_THRESHOLD_SPORTS", "RUNNING").upper().split(","),
             # Separate from lactate_threshold_sports: FTP applies broadly
             # (confirmed live for both running and cycling), unlike
             # lactateThresholdSpeed/HeartRate, which aren't meaningful for
             # cycling -- see #22. A shared sport list would mean either
             # missing cycling FTP or wasting two empty calls/day fetching
             # cycling lactate threshold speed/HR that Garmin doesn't track.
-            ftp_sports=env.get("FTP_SPORTS", "RUNNING,CYCLING")
-            .upper()
-            .split(","),
+            ftp_sports=env.get("FTP_SPORTS", "RUNNING,CYCLING").upper().split(","),
             keep_fit_files=_env_bool(env.get("KEEP_FIT_FILES"), default=False),
             fit_file_storage_location=env.get(
                 "FIT_FILE_STORAGE_LOCATION",
                 os.path.join(os.path.expanduser("~"), "fit_filestore"),
             ),
-            always_process_fit_files=_env_bool(
-                env.get("ALWAYS_PROCESS_FIT_FILES"), default=False
-            ),
-            request_intraday_data_refresh=_env_bool(
-                env.get("REQUEST_INTRADAY_DATA_REFRESH"), default=False
-            ),
-            ignore_intraday_data_refresh_days=int(
-                env.get("IGNORE_INTRADAY_DATA_REFRESH_DAYS", 30)
-            ),
-            tag_measurements_with_user_email=_env_bool(
-                env.get("TAG_MEASUREMENTS_WITH_USER_EMAIL"), default=False
-            ),
-            force_reprocess_activities=_env_bool(
-                env.get("FORCE_REPROCESS_ACTIVITIES"), default=True
-            ),
+            always_process_fit_files=_env_bool(env.get("ALWAYS_PROCESS_FIT_FILES"), default=False),
+            request_intraday_data_refresh=_env_bool(env.get("REQUEST_INTRADAY_DATA_REFRESH"), default=False),
+            ignore_intraday_data_refresh_days=int(env.get("IGNORE_INTRADAY_DATA_REFRESH_DAYS", 30)),
+            tag_measurements_with_user_email=_env_bool(env.get("TAG_MEASUREMENTS_WITH_USER_EMAIL"), default=False),
+            force_reprocess_activities=_env_bool(env.get("FORCE_REPROCESS_ACTIVITIES"), default=True),
             user_timezone=env.get("USER_TIMEZONE", ""),
             ignore_errors=_env_bool(env.get("IGNORE_ERRORS"), default=False),
         )

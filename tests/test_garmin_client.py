@@ -74,9 +74,7 @@ def _config_with_credentials():
     )
 
 
-def test_headless_mfa_fails_with_documented_exception_and_clear_log(
-    monkeypatch, caplog
-):
+def test_headless_mfa_fails_with_documented_exception_and_clear_log(monkeypatch, caplog):
     """
     Pins the same overall outcome as before this fix (garmin_login() still
     raises Exception("Garmin login failed after credential/MFA attempt") --
@@ -88,9 +86,7 @@ def test_headless_mfa_fails_with_documented_exception_and_clear_log(
     monkeypatch.setattr(sys.stdin, "isatty", lambda: False)
 
     with caplog.at_level(logging.ERROR):
-        with pytest.raises(
-            Exception, match="Garmin login failed after credential/MFA attempt"
-        ):
+        with pytest.raises(Exception, match="Garmin login failed after credential/MFA attempt"):
             garmin_client.garmin_login(_config_with_credentials())
 
     assert "MFA code required" in caplog.text

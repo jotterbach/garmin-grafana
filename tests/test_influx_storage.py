@@ -9,7 +9,6 @@ from datetime import datetime, timezone
 
 import pytest
 import requests
-from influxdb.exceptions import InfluxDBClientError
 
 from config import Config
 from influx_storage import InfluxStorage
@@ -84,8 +83,6 @@ def test_check_connection_propagates_when_unreachable():
     # ConnectionError, not InfluxDBClientError; this test documents that
     # real (pre-existing) behavior rather than assuming a nicer exception
     # type that was never actually guaranteed.
-    unreachable = InfluxStorage(
-        Config.from_env({"INFLUXDB_HOST": "127.0.0.1", "INFLUXDB_PORT": "1"})
-    )
+    unreachable = InfluxStorage(Config.from_env({"INFLUXDB_HOST": "127.0.0.1", "INFLUXDB_PORT": "1"}))
     with pytest.raises(requests.exceptions.ConnectionError):
         unreachable.check_connection()
