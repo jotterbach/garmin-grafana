@@ -84,6 +84,32 @@ def test_solar_intensity_exact_point_shape(garmin_fetch_module):
     ]
 
 
+def test_solar_intensity_returns_no_points_when_api_response_is_not_a_dict(garmin_fetch_module):
+    """
+    Real production crash (2026-09-24): a 3-year backfill died with
+    AttributeError: 'list' object has no attribute 'get' at
+    si_all.get("solarDailyDataDTOs", []) -- get_device_solar_data
+    returned a list instead of the expected dict for some date/device
+    combination (root cause not pinned down; live-testing every device
+    ID seen around the crash returned a normal dict, so this may be a
+    transient API response). Not caught by fetch_write_bulk's retry
+    logic (which only catches connection/auth/rate-limit errors), so it
+    killed the whole multi-year run.
+
+    get_device_solar_data's real, documented return shape is a dict --
+    this guards against the unexpected case instead of assuming it. A
+    *non-empty* list, not [] -- get_solar_intensity's existing
+    `... or {}` fallback already turns a falsy [] into {} harmlessly,
+    which is why the real crash needed an actually-populated list to
+    reach the .get() call that blew up.
+    """
+    garmin_fetch_module.garmin_obj.get_device_solar_data = lambda device_id, date_str: ["unexpected", "shape"]
+
+    points = garmin_fetch_module.get_solar_intensity(DATE_STR)
+
+    assert points == []
+
+
 def test_blood_pressure_exact_point_shape(garmin_fetch_module):
     """
     Post-migration point shape for get_blood_pressure, now routed through

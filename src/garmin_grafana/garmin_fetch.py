@@ -1726,6 +1726,16 @@ def get_solar_intensity(date_str):
         return points_list
 
     si_all = garmin_obj.get_device_solar_data(GARMIN_DEVICEID, date_str) or {}
+    # Real crash (2026-09-24): a 3-year backfill died with 'list' object
+    # has no attribute 'get' -- the API returned something other than the
+    # expected dict for one date/device combination, uncaught since this
+    # isn't one of fetch_write_bulk's retryable connection/auth errors.
+    # Root cause not pinned down (every device ID tried live returned a
+    # normal dict, so this may be a transient response) -- guard against
+    # the unexpected shape rather than assume it.
+    if not isinstance(si_all, dict):
+        logging.warning(f"Unexpected Solar Intensity response shape for date {date_str}: {type(si_all).__name__}")
+        si_all = {}
     if len(si_all.get("solarDailyDataDTOs", [])) > 0:
         si_list = si_all["solarDailyDataDTOs"][0].get("solarInputReadings", [])
         for si_measurement in si_list:
@@ -1903,7 +1913,27 @@ def daily_fetch_write(date_str):
         return None
     for key, handler in DAILY_METRIC_HANDLERS.items():
         if key in FETCH_SELECTION:
-            handler(date_str)
+            try:
+                handler(date_str)
+            except (
+                GarminConnectTooManyRequestsError,
+                GarminConnectAuthenticationError,
+                GarminConnectConnectionError,
+                requests.exceptions.HTTPError,
+                requests.exceptions.ConnectionError,
+                requests.exceptions.Timeout,
+            ):
+                # Let these propagate to fetch_write_bulk's retry/backoff/
+                # 500-counter logic, which needs to see them to retry or
+                # skip a whole day correctly -- not this function's job.
+                raise
+            except Exception:
+                # A genuine bug in one handler (real crash, 2026-09-24:
+                # an uncaught AttributeError in get_solar_intensity killed
+                # a whole 3-year backfill) shouldn't take down every
+                # *other*, unrelated, working metric for this same day --
+                # log it and keep going.
+                logging.exception(f"Metric handler '{key}' failed for date {date_str} -- skipping just this metric")
 
 
 # %%
