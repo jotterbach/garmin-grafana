@@ -1463,8 +1463,13 @@ def get_lifestyle_data(date_str):
     try:
         logging.info(f"Fetching Lifestyle Journaling data for date {date_str}")
         journal_data = garmin_obj.get_lifestyle_logging_data(date_str)
-        
-        daily_logs = journal_data.get('dailyLogsReport', [])
+
+        # .get(key, []) only falls back to [] when the key is *absent* --
+        # Garmin returns "dailyLogsReport": null (present, but None) for
+        # any day with no logged behaviors, which is every day for an
+        # account that's never used the journaling feature. `or []`
+        # catches the explicit-None case too.
+        daily_logs = journal_data.get('dailyLogsReport') or []
         
         for log in daily_logs:
             behavior_name = log.get('name') or log.get('behavior')

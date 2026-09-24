@@ -18,6 +18,8 @@ this is a real, pre-existing inconsistency across these functions, not
 something to unify, and the tests below pin down both behaviors exactly.
 """
 
+import logging
+
 DATE_STR = "2026-01-15"
 
 
@@ -263,6 +265,34 @@ def test_body_composition_exact_point_shape(garmin_fetch_module):
             },
         },
     ]
+
+
+def test_lifestyle_data_returns_no_points_when_dailylogsreport_is_null(garmin_fetch_module, caplog):
+    """
+    Real production bug found running the 3-year backfill (2026-09-24):
+    Garmin returns "dailyLogsReport": null (not an empty list) for an
+    account that's never used the lifestyle-journal feature -- every
+    single day. journal_data.get('dailyLogsReport', []) doesn't catch
+    this: .get(key, default) only substitutes the default when the key
+    is *absent*, not when its value is None, so daily_logs ended up None
+    and `for log in daily_logs` raised "'NoneType' object is not
+    iterable" on every call, caught by the function's own try/except and
+    logged as a scary "Failed to fetch" warning for what is actually
+    completely normal no-data behavior.
+    """
+    garmin_fetch_module.garmin_obj.get_lifestyle_logging_data = (
+        lambda date_str: {"calendarDate": date_str, "dailyLogsReport": None, "completionStats": []}
+    )
+
+    with caplog.at_level(logging.WARNING):
+        points = garmin_fetch_module.get_lifestyle_data(DATE_STR)
+
+    assert points == []
+    # The bug: this used to hit the function's except branch (which
+    # happens to also return []), logging a "Failed to fetch" warning
+    # for completely normal no-data behavior instead of just returning
+    # cleanly.
+    assert not caplog.records, f"expected no warnings, got: {[r.message for r in caplog.records]}"
 
 
 def test_lifestyle_data_exact_point_shape(garmin_fetch_module):
