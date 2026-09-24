@@ -12,6 +12,7 @@ The currently supported imports are:
 Future work:
 * Add support for monitor .fit files.
 """
+
 import time
 import argparse
 from typing import List
@@ -47,9 +48,7 @@ def iso_to_timestamp_ms(iso_str: str) -> int:
     return int(dt.timestamp() * 1000)
 
 
-FitFileEntry = namedtuple(
-    "FitFileEntry", ["date", "activity", "zip_file_name", "fit_file_name"]
-)
+FitFileEntry = namedtuple("FitFileEntry", ["date", "activity", "zip_file_name", "fit_file_name"])
 
 
 class ActivityDownloadFormatEnum(Enum):
@@ -147,10 +146,7 @@ class GarminBulkExport:
         self.agg_stats, self.hydration_stats = self.load_agg_stats()
 
         self.cached_fit_file_index = self.path / CACHED_FIT_FILE_INDEX_FILENAME
-        self.fit_file_index = (
-            load_cached_fit_file_index(self.cached_fit_file_index)
-            or self.load_fit_file_index()
-        )
+        self.fit_file_index = load_cached_fit_file_index(self.cached_fit_file_index) or self.load_fit_file_index()
 
     def fail(self, msg: str):
         """Raise a failure with a custom message."""
@@ -170,9 +166,7 @@ class GarminBulkExport:
     def load_activities(self):
         """Returns all found activities."""
         summary_file_paths = [
-            p
-            for p in self.all_files
-            if re.search(r"DI-Connect-Fitness.*summarizedActivities.json", str(p))
+            p for p in self.all_files if re.search(r"DI-Connect-Fitness.*summarizedActivities.json", str(p))
         ]
         if not summary_file_paths:
             return {}
@@ -186,9 +180,9 @@ class GarminBulkExport:
 
         for a in activities:
             # Convert values into the expected API format and key names.
-            a["startTimeGMT"] = datetime.fromtimestamp(
-                a["startTimeGmt"] / 1000, tz=timezone.utc
-            ).strftime("%Y-%m-%d %H:%M:%S")
+            a["startTimeGMT"] = datetime.fromtimestamp(a["startTimeGmt"] / 1000, tz=timezone.utc).strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
             activity_type = a.get("activityType")
             a["activityName"] = a.get("name", activity_type)
             a["activityType"] = {"typeKey": activity_type}
@@ -201,11 +195,7 @@ class GarminBulkExport:
 
     def load_sleep_stats(self):
         """Returns all found sleep stats."""
-        sleep_stats_paths = [
-            p
-            for p in self.all_files
-            if re.search(r"DI-Connect-Wellness.*sleepData.json", str(p))
-        ]
+        sleep_stats_paths = [p for p in self.all_files if re.search(r"DI-Connect-Wellness.*sleepData.json", str(p))]
         if not sleep_stats_paths:
             self.fail("Failed to find any sleep stats files")
 
@@ -218,14 +208,10 @@ class GarminBulkExport:
                         continue
                     stats_date = stats.get("calendarDate")
                     if stats_date in sleep_stats:
-                        self.fail(
-                            f"Duplicate entries found for sleep stats dated on {stats_date}"
-                        )
+                        self.fail(f"Duplicate entries found for sleep stats dated on {stats_date}")
 
                     # Coerce values into the expected API format.
-                    stats["sleepEndTimestampGMT"] = iso_to_timestamp_ms(
-                        stats["sleepEndTimestampGMT"]
-                    )
+                    stats["sleepEndTimestampGMT"] = iso_to_timestamp_ms(stats["sleepEndTimestampGMT"])
                     sleep_stats[stats_date.strip()] = stats
 
         logging.info("Loading %d days of sleep stats", len(sleep_stats))
@@ -250,11 +236,7 @@ class GarminBulkExport:
 
     def load_agg_stats(self):
         """Returns all found aggregate daily stats."""
-        agg_stats_paths = [
-            p
-            for p in self.all_files
-            if re.search(r"DI-Connect-Aggregator.*UDSFile.*.json", str(p))
-        ]
+        agg_stats_paths = [p for p in self.all_files if re.search(r"DI-Connect-Aggregator.*UDSFile.*.json", str(p))]
         if not agg_stats_paths:
             self.fail("Failed to find any aggregated stats files")
 
@@ -273,15 +255,11 @@ class GarminBulkExport:
                     else:
                         stats_date = stats["calendarDate"]
                         if stats_date in agg_stats:
-                            self.fail(
-                                f"Duplicate entries found for aggregated stats dated on {stats_date}"
-                            )
+                            self.fail(f"Duplicate entries found for aggregated stats dated on {stats_date}")
 
                         # 'sleepingSeconds' isn't included in this data structure
                         # so we have to calculate it from the sleep stats.
-                        stats["sleepingSeconds"] = self.calculate_sleeping_seconds(
-                            stats_date
-                        )
+                        stats["sleepingSeconds"] = self.calculate_sleeping_seconds(stats_date)
 
                         agg_stats[stats_date.strip()] = stats
 
@@ -296,11 +274,7 @@ class GarminBulkExport:
         Does not currently support monitoring messages, only activities.
         """
 
-        zip_file_paths = [
-            p
-            for p in self.all_files
-            if re.search(r"DI-Connect-Uploaded-Files.*.zip", str(p))
-        ]
+        zip_file_paths = [p for p in self.all_files if re.search(r"DI-Connect-Uploaded-Files.*.zip", str(p))]
 
         fit_file_index = []
 
@@ -310,7 +284,7 @@ class GarminBulkExport:
                 logging.info("Processing %s (%d files)", zip_file_path, len(namelist))
                 for i, filename in enumerate(namelist):
                     if i % 500 == 0:
-                        logging.info(f"{i/len(namelist):.2%} .fit files processed ... ")
+                        logging.info(f"{i / len(namelist):.2%} .fit files processed ... ")
 
                     if filename.lower().endswith(".fit"):
                         with z.open(filename) as f:
@@ -322,9 +296,7 @@ class GarminBulkExport:
                         session_sport = None
                         session_date = None
                         for session_data in fit_messages.get("session_mesgs") or []:
-                            session_date = session_data["start_time"].replace(
-                                tzinfo=timezone.utc
-                            )
+                            session_date = session_data["start_time"].replace(tzinfo=timezone.utc)
                             session_sport = session_data.get("sport", "Unknown")
 
                         if session_sport is not None and session_date is not None:
@@ -416,9 +388,7 @@ class GarminBulkExport:
         if not activity:
             self.fail(f"Activity ID not found: {activityId}")
 
-        activity_start = datetime.strptime(
-            activity["startTimeGMT"], "%Y-%m-%d %H:%M:%S"
-        ).replace(tzinfo=timezone.utc)
+        activity_start = datetime.strptime(activity["startTimeGMT"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
 
         # Find closest matching FIT file
         # Allow small timestamp drift (Garmin often differs by seconds)
@@ -436,10 +406,7 @@ class GarminBulkExport:
                     best_delta = delta
 
         if not best_match:
-            self.fail(
-                f"No matching FIT file found for activityId={activityId} "
-                f"({activity_start.isoformat()})"
-            )
+            self.fail(f"No matching FIT file found for activityId={activityId} ({activity_start.isoformat()})")
 
         logging.info(
             "Matched activityId=%s to FIT file %s (%s, delta=%ds)",
@@ -466,9 +433,7 @@ class GarminBulkExport:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        prog="Garmin Bulk Import", description="Imports data from a Garmin bulk export"
-    )
+    parser = argparse.ArgumentParser(prog="Garmin Bulk Import", description="Imports data from a Garmin bulk export")
     parser.add_argument(
         "--bulk_data_path",
         # This is the default path used with doing a manual docker import (See README instructions)
@@ -490,9 +455,7 @@ if __name__ == "__main__":
 
     args.start_date = args.start_date or os.getenv("MANUAL_START_DATE")
     if not args.start_date:
-        raise RuntimeError(
-            "start_date must be set using --start_date or MANUAL_START_DATE environment varioable"
-        )
+        raise RuntimeError("start_date must be set using --start_date or MANUAL_START_DATE environment varioable")
 
     # Override the garmin_obj with GarminBulkExport that implements the same interface.
     garmin_fetch.garmin_obj = GarminBulkExport(args.bulk_data_path)

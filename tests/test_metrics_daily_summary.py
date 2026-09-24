@@ -133,9 +133,7 @@ def test_hydration_exact_point_shape(garmin_fetch_module):
     ]
 
 
-def test_daily_fetch_write_respects_custom_fetch_selection_subset(
-    garmin_fetch_module, monkeypatch
-):
+def test_daily_fetch_write_respects_custom_fetch_selection_subset(garmin_fetch_module, monkeypatch):
     """
     Narrower than test_smoke_pipeline.py's test_daily_fetch_write_end_to_end
     (which always uses the full default FETCH_SELECTION) -- proves the

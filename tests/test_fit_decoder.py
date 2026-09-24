@@ -36,10 +36,7 @@ def decoded_corpus():
     """{path: decoded messages dict} for every real FIT file in the corpus."""
     paths = real_fit_paths()
     if not paths:
-        pytest.skip(
-            f"no real FIT files found under {FIT_CORPUS_DIR} -- "
-            "local-only characterization, not a CI gate"
-        )
+        pytest.skip(f"no real FIT files found under {FIT_CORPUS_DIR} -- local-only characterization, not a CI gate")
     result = {}
     for path in paths:
         with open(path, "rb") as f:
@@ -83,13 +80,9 @@ def test_record_timestamps_are_timezone_aware_utc_and_non_decreasing(decoded_cor
         for ts in timestamps:
             assert isinstance(ts, datetime.datetime), path.name
             assert ts.tzinfo is not None, (
-                f"{path.name}: expected a timezone-aware timestamp "
-                "(garmin-fit-sdk default), got a naive one"
+                f"{path.name}: expected a timezone-aware timestamp (garmin-fit-sdk default), got a naive one"
             )
-        assert timestamps == sorted(timestamps), (
-            f"{path.name}: record timestamps are not monotonically "
-            "non-decreasing"
-        )
+        assert timestamps == sorted(timestamps), f"{path.name}: record timestamps are not monotonically non-decreasing"
 
 
 def test_position_fields_when_present_are_ints_in_semicircle_range(decoded_corpus):

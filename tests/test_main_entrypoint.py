@@ -65,9 +65,7 @@ def test_determine_initial_sync_time_falls_back_to_seven_days_ago_when_empty(
 # --- _determine_local_timediff ---
 
 
-def test_determine_local_timediff_uses_user_timezone_override(
-    garmin_fetch_module, monkeypatch
-):
+def test_determine_local_timediff_uses_user_timezone_override(garmin_fetch_module, monkeypatch):
     monkeypatch.setattr(garmin_fetch_module, "USER_TIMEZONE", "Europe/Berlin")
 
     result = _determine_local_timediff()
@@ -76,9 +74,7 @@ def test_determine_local_timediff_uses_user_timezone_override(
     assert result == expected
 
 
-def test_determine_local_timediff_auto_detects_from_last_activity(
-    garmin_fetch_module, monkeypatch
-):
+def test_determine_local_timediff_auto_detects_from_last_activity(garmin_fetch_module, monkeypatch):
     monkeypatch.setattr(garmin_fetch_module, "USER_TIMEZONE", "")
     garmin_fetch_module.garmin_obj.get_last_activity = lambda: {
         "startTimeLocal": "2026-03-01 14:30:00",
@@ -90,9 +86,7 @@ def test_determine_local_timediff_auto_detects_from_last_activity(
     assert result == timedelta(hours=2)
 
 
-def test_determine_local_timediff_falls_back_to_utc_on_missing_data(
-    garmin_fetch_module, monkeypatch
-):
+def test_determine_local_timediff_falls_back_to_utc_on_missing_data(garmin_fetch_module, monkeypatch):
     monkeypatch.setattr(garmin_fetch_module, "USER_TIMEZONE", "")
     garmin_fetch_module.garmin_obj.get_last_activity = lambda: {}  # KeyError
 
@@ -122,9 +116,7 @@ def test_maybe_sync_once_fetches_when_watch_is_newer(garmin_fetch_module, monkey
     assert calls[0] == (older.strftime("%Y-%m-%d"), watch_time_utc.strftime("%Y-%m-%d"))
 
 
-def test_maybe_sync_once_does_nothing_when_influxdb_already_current(
-    garmin_fetch_module, monkeypatch
-):
+def test_maybe_sync_once_does_nothing_when_influxdb_already_current(garmin_fetch_module, monkeypatch):
     calls = []
     monkeypatch.setattr(
         garmin_fetch_module,
@@ -143,15 +135,11 @@ def test_maybe_sync_once_does_nothing_when_influxdb_already_current(
 # --- main() ---
 
 
-def test_main_raises_and_never_logs_in_when_influxdb_unreachable(
-    garmin_fetch_module, monkeypatch
-):
+def test_main_raises_and_never_logs_in_when_influxdb_unreachable(garmin_fetch_module, monkeypatch):
     def _fail():
         raise InfluxDBClientError("down")
 
-    monkeypatch.setattr(
-        garmin_fetch_module.INFLUXDB_STORAGE, "check_connection", _fail
-    )
+    monkeypatch.setattr(garmin_fetch_module.INFLUXDB_STORAGE, "check_connection", _fail)
     login_calls = []
     monkeypatch.setattr(
         garmin_fetch_module,
@@ -183,9 +171,7 @@ def test_main_manual_start_date_runs_once_and_returns(garmin_fetch_module, monke
     assert calls == [("2026-01-01", "2026-01-02")]
 
 
-def test_main_automatic_mode_wires_helpers_into_the_polling_loop(
-    garmin_fetch_module, monkeypatch
-):
+def test_main_automatic_mode_wires_helpers_into_the_polling_loop(garmin_fetch_module, monkeypatch):
     monkeypatch.setattr(garmin_fetch_module.INFLUXDB_STORAGE, "check_connection", lambda: None)
     monkeypatch.setattr(garmin_fetch_module, "garmin_login", lambda config: garmin_fetch_module.garmin_obj)
     monkeypatch.setattr(garmin_fetch_module, "MANUAL_START_DATE", None)
@@ -198,9 +184,7 @@ def test_main_automatic_mode_wires_helpers_into_the_polling_loop(
         lambda storage: sentinel_initial_sync,
     )
     local_timediff_sentinel = timedelta(hours=3)
-    monkeypatch.setattr(
-        garmin_fetch_module, "_determine_local_timediff", lambda: local_timediff_sentinel
-    )
+    monkeypatch.setattr(garmin_fetch_module, "_determine_local_timediff", lambda: local_timediff_sentinel)
 
     class _StopTheLoop(Exception):
         pass

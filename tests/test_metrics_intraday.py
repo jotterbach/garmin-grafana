@@ -280,9 +280,11 @@ def test_lifestyle_data_returns_no_points_when_dailylogsreport_is_null(garmin_fe
     logged as a scary "Failed to fetch" warning for what is actually
     completely normal no-data behavior.
     """
-    garmin_fetch_module.garmin_obj.get_lifestyle_logging_data = (
-        lambda date_str: {"calendarDate": date_str, "dailyLogsReport": None, "completionStats": []}
-    )
+    garmin_fetch_module.garmin_obj.get_lifestyle_logging_data = lambda date_str: {
+        "calendarDate": date_str,
+        "dailyLogsReport": None,
+        "completionStats": [],
+    }
 
     with caplog.at_level(logging.WARNING):
         points = garmin_fetch_module.get_lifestyle_data(DATE_STR)

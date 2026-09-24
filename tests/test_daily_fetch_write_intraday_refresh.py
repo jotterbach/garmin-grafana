@@ -37,16 +37,12 @@ class FakeConnectapi:
 
 def _sleep_recorder(monkeypatch, garmin_fetch_module):
     calls = []
-    monkeypatch.setattr(
-        garmin_fetch_module.time, "sleep", lambda seconds: calls.append(seconds)
-    )
+    monkeypatch.setattr(garmin_fetch_module.time, "sleep", lambda seconds: calls.append(seconds))
     return calls
 
 
 def _set_up(garmin_fetch_module, monkeypatch, status, request_refresh=True):
-    monkeypatch.setattr(
-        garmin_fetch_module, "REQUEST_INTRADAY_DATA_REFRESH", request_refresh
-    )
+    monkeypatch.setattr(garmin_fetch_module, "REQUEST_INTRADAY_DATA_REFRESH", request_refresh)
     monkeypatch.setattr(garmin_fetch_module, "FETCH_SELECTION", "hydration")
     fake_connectapi = FakeConnectapi(status)
     garmin_fetch_module.garmin_obj.connectapi = fake_connectapi
@@ -54,9 +50,7 @@ def _set_up(garmin_fetch_module, monkeypatch, status, request_refresh=True):
 
 
 def test_refresh_logic_skipped_when_feature_flag_off(garmin_fetch_module, monkeypatch):
-    fake_connectapi = _set_up(
-        garmin_fetch_module, monkeypatch, "SUBMITTED", request_refresh=False
-    )
+    fake_connectapi = _set_up(garmin_fetch_module, monkeypatch, "SUBMITTED", request_refresh=False)
 
     garmin_fetch_module.daily_fetch_write(DATE_STR)
 
@@ -94,9 +88,7 @@ def test_complete_status_proceeds_without_sleeping(garmin_fetch_module, monkeypa
     assert garmin_fetch_module.INFLUXDB_STORAGE.query('SELECT * FROM "Hydration"')
 
 
-def test_no_files_found_status_skips_metric_handlers_entirely(
-    garmin_fetch_module, monkeypatch
-):
+def test_no_files_found_status_skips_metric_handlers_entirely(garmin_fetch_module, monkeypatch):
     _set_up(garmin_fetch_module, monkeypatch, "NO_FILES_FOUND")
 
     result = garmin_fetch_module.daily_fetch_write(DATE_STR)
@@ -105,9 +97,7 @@ def test_no_files_found_status_skips_metric_handlers_entirely(
     assert garmin_fetch_module.INFLUXDB_STORAGE.query('SELECT * FROM "Hydration"') == []
 
 
-def test_denied_status_sleeps_24h_then_retries_then_proceeds(
-    garmin_fetch_module, monkeypatch
-):
+def test_denied_status_sleeps_24h_then_retries_then_proceeds(garmin_fetch_module, monkeypatch):
     fake_connectapi = _set_up(garmin_fetch_module, monkeypatch, "DENIED")
     sleeps = _sleep_recorder(monkeypatch, garmin_fetch_module)
 

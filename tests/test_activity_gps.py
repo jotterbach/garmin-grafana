@@ -65,9 +65,7 @@ def _by_measurement(points, measurement):
     return [p for p in points if p["measurement"] == measurement]
 
 
-def test_running_file_produces_expected_measurement_shapes(
-    garmin_fetch_module, running_file
-):
+def test_running_file_produces_expected_measurement_shapes(garmin_fetch_module, running_file):
     points = _fetch(garmin_fetch_module, running_file, 900001, "running")
 
     gps_points = _by_measurement(points, "ActivityGPS")
@@ -108,9 +106,7 @@ def test_running_file_produces_expected_measurement_shapes(
         assert p["fields"]["Index"] >= 1
 
 
-def test_grade_adjusted_speed_uses_the_post_migration_field_key(
-    garmin_fetch_module, running_file
-):
+def test_grade_adjusted_speed_uses_the_post_migration_field_key(garmin_fetch_module, running_file):
     """
     Confirmed via fit_decoder's real-corpus tests that this specific
     running file's record_mesgs carry field def_num 140 on every record
@@ -123,11 +119,7 @@ def test_grade_adjusted_speed_uses_the_post_migration_field_key(
     points = _fetch(garmin_fetch_module, running_file, 900002, "running")
     gps_points = _by_measurement(points, "ActivityGPS")
 
-    non_none = [
-        p["fields"]["GradeAdjustedSpeed"]
-        for p in gps_points
-        if p["fields"]["GradeAdjustedSpeed"] is not None
-    ]
+    non_none = [p["fields"]["GradeAdjustedSpeed"] for p in gps_points if p["fields"]["GradeAdjustedSpeed"] is not None]
     assert non_none, (
         "expected at least one GradeAdjustedSpeed value from this real "
         "running file (known to populate this field on every record) -- "
@@ -138,9 +130,7 @@ def test_grade_adjusted_speed_uses_the_post_migration_field_key(
         assert isinstance(v, float)
 
 
-def test_lap_swimming_file_produces_length_points(
-    garmin_fetch_module, lap_swimming_file
-):
+def test_lap_swimming_file_produces_length_points(garmin_fetch_module, lap_swimming_file):
     points = _fetch(garmin_fetch_module, lap_swimming_file, 900003, "lap_swimming")
 
     length_points = _by_measurement(points, "ActivityLength")
@@ -152,9 +142,7 @@ def test_lap_swimming_file_produces_length_points(
         assert p["fields"]["Index"] >= 1
 
 
-def test_activity_gps_timestamps_are_non_decreasing_within_an_activity(
-    garmin_fetch_module, running_file
-):
+def test_activity_gps_timestamps_are_non_decreasing_within_an_activity(garmin_fetch_module, running_file):
     points = _fetch(garmin_fetch_module, running_file, 900004, "running")
     gps_points = _by_measurement(points, "ActivityGPS")
 

@@ -1,4 +1,4 @@
-# There is support for influxdb v3 (core) OSS, but it's highly recommended to use Influxdb 1.x versions with this project. 
+# There is support for influxdb v3 (core) OSS, but it's highly recommended to use Influxdb 1.x versions with this project.
 
 services:
   garmin-fetch-data:
@@ -6,7 +6,7 @@ services:
     build: .
     image: garmin-grafana-fork:local
     container_name: garmin-fetch-data
-    # user: root # Runs the container as root user, uncomment this line if you are getting permission issues which can't be resolved otherwise. For this, you also need to change the below volume mount from './garminconnect-tokens:/home/appuser/.garminconnect' to './garminconnect-tokens:/root/.garminconnect' to ensure the token files persist during container rebuilding. 
+    # user: root # Runs the container as root user, uncomment this line if you are getting permission issues which can't be resolved otherwise. For this, you also need to change the below volume mount from './garminconnect-tokens:/home/appuser/.garminconnect' to './garminconnect-tokens:/root/.garminconnect' to ensure the token files persist during container rebuilding.
     depends_on:
       - influxdb
     volumes:
@@ -28,7 +28,7 @@ services:
       # - INFLUXDB_VERSION=1 # Required for influxdb V3, Default is 1, must be overridden with 3 if using Influxdb V3
       # - INFLUXDB_V3_ACCESS_TOKEN=your_influxdb_admin_access_token # Required for influxdb V3 (ignored for V1), Set this to your admin access token (or a token that has database R/W access) - You can generate this by following step 3 notes in the README installation
       #####################################################################################
-      # The following ENV variables will override some default settings. 
+      # The following ENV variables will override some default settings.
       # Please read the README guide before using them as they may change how the script behaves
       #####################################################################################
       # - LOG_LEVEL=INFO # change to DEBUG to get DEBUG logs

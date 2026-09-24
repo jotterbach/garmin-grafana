@@ -9,7 +9,9 @@ from influx_storage import InfluxStorage
 
 
 parser = argparse.ArgumentParser(description="Export InfluxDB measurements to individual CSVs in a ZIP archive")
-parser.add_argument("--last-n-days", type=int, default=None, help="Query data from the last N days (overrides date range)")
+parser.add_argument(
+    "--last-n-days", type=int, default=None, help="Query data from the last N days (overrides date range)"
+)
 parser.add_argument("--start-date", type=str, default=None, help="Start date in YYYY-MM-DD")
 parser.add_argument("--end-date", type=str, default=None, help="End date in YYYY-MM-DD (defaults to today)")
 args = parser.parse_args()

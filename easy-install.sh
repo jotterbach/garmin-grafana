@@ -9,9 +9,12 @@ echo "Checking if Docker is installed..."
 if ! command -v docker &> /dev/null
 then
     echo "Docker is not installed. Attempting to install docker... If this step fails, you can re-try this script after installing docker manually"
-    curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh || { echo "Automatic Docker installation failed - Please install docker manually. Exiting."; exit 1; }
+    if ! curl -fsSL https://get.docker.com -o get-docker.sh || ! sh get-docker.sh; then
+        echo "Automatic Docker installation failed - Please install docker manually. Exiting."
+        exit 1
+    fi
     echo "Docker installed, adding current user to docker group (requires superuser access)"
-    sudo groupadd docker; sudo usermod -aG docker $USER; newgrp docker
+    sudo groupadd docker; sudo usermod -aG docker "$USER"; newgrp docker
 fi
 
 echo "Checking if Docker daemon is running..."
@@ -41,8 +44,11 @@ fi
 
 echo "Replacing {DS_GARMIN_STATS} variable with garmin_influxdb in the dashboard JSON..."
 if [[ "$OSTYPE" == "darwin"* ]]; then
+    # shellcheck disable=SC2016 # Literal-text sed pattern, not a shell
+    # variable -- ${DS_GARMIN_STATS} must stay unexpanded here.
     sed -i '' 's/\${DS_GARMIN_STATS}/garmin_influxdb/g' ./Grafana_Dashboard/Garmin-Grafana-Dashboard.json
 else
+    # shellcheck disable=SC2016 # Same as above.
     sed -i 's/\${DS_GARMIN_STATS}/garmin_influxdb/g' ./Grafana_Dashboard/Garmin-Grafana-Dashboard.json
 fi
 

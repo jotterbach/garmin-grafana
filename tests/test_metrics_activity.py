@@ -38,7 +38,9 @@ def test_activity_summary_exact_point_shape(garmin_fetch_module):
     # assert the type explicitly for the fields this fix is about.
     for point in (points[0], points[2]):
         for field in ["hrTimeInZone_1", "hrTimeInZone_2", "hrTimeInZone_3", "hrTimeInZone_4", "hrTimeInZone_5"]:
-            assert isinstance(point["fields"][field], float), f"{field} should be float, got {type(point['fields'][field])}"
+            assert isinstance(point["fields"][field], float), (
+                f"{field} should be float, got {type(point['fields'][field])}"
+            )
 
     assert points == [
         {

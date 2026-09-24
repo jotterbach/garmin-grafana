@@ -31,7 +31,5 @@ def decode_fit(fit_bytes: bytes) -> dict[str, list[dict]]:
     stream = Stream.from_byte_array(fit_bytes)
     messages, errors = Decoder(stream).read()
     if errors:
-        raise FitDecodeError(
-            f"{len(errors)} error(s) decoding FIT data: {errors}"
-        )
+        raise FitDecodeError(f"{len(errors)} error(s) decoding FIT data: {errors}")
     return messages

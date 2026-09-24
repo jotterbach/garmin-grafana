@@ -1,0 +1,28 @@
+extends: relaxed
+
+# Deliberately conservative (#12), same spirit as pyproject.toml's ruff
+# config: catch real mistakes (bad indentation, tab characters, actual
+# syntax errors, trailing whitespace), not force a rewrite of every
+# pre-existing stylistic choice already in the repo. yamllint's `relaxed`
+# preset already turns line-length into a non-blocking warning and drops
+# the comment-formatting nitpicks that fired hundreds of times against
+# this project's deliberately long, heavily-commented compose.yml/
+# kubernetes-spec-example.yaml.
+rules:
+  line-length:
+    max: 120
+  truthy:
+    # GitHub Actions' own `on:` workflow trigger key is a well-known,
+    # deliberate false positive for this rule -- not a real y/n-as-string
+    # ambiguity bug.
+    check-keys: false
+  new-lines: disable # Grafana_Dashboard/*.yaml and Grafana_Datasource/*.yaml
+    # are CRLF, likely re-introduced any time they're re-exported from the
+    # Grafana UI -- not worth a repo-wide line-ending rewrite for a
+    # non-functional style nit.
+
+ignore: |
+  # Helm chart templates -- Go template syntax ({{ .Values.x }}) isn't
+  # valid standalone YAML, `helm lint`/`helm template` is the right tool
+  # for these, not yamllint.
+  k8s/templates/

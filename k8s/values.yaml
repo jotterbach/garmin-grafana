@@ -54,7 +54,7 @@ influxdb:
     repository: influxdb
     tag: "1.11"
   persistence:
-    enabled: false 
+    enabled: false
     #size: 5Gi
     #storageClass: ""
   auth:

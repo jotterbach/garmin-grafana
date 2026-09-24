@@ -68,9 +68,7 @@ class ScriptedDailyFetchWrite:
 
 def _sleep_recorder(monkeypatch, garmin_fetch_module):
     calls = []
-    monkeypatch.setattr(
-        garmin_fetch_module.time, "sleep", lambda seconds: calls.append(seconds)
-    )
+    monkeypatch.setattr(garmin_fetch_module.time, "sleep", lambda seconds: calls.append(seconds))
     return calls
 
 
@@ -137,12 +135,8 @@ def test_429_retries_then_succeeds(garmin_fetch_module, monkeypatch):
     assert garmin_fetch_module.FETCH_FAILED_WAIT_SECONDS in sleeps
 
 
-def test_single_500_error_retries_then_succeeds_and_resets_counter(
-    garmin_fetch_module, monkeypatch
-):
-    scripted, login_calls, sleeps = _set_up(
-        garmin_fetch_module, monkeypatch, [_http_error(500), None]
-    )
+def test_single_500_error_retries_then_succeeds_and_resets_counter(garmin_fetch_module, monkeypatch):
+    scripted, login_calls, sleeps = _set_up(garmin_fetch_module, monkeypatch, [_http_error(500), None])
 
     garmin_fetch_module.fetch_write_bulk(DATE_STR, DATE_STR)
 
@@ -165,9 +159,7 @@ def test_consecutive_500_errors_give_up_at_threshold(garmin_fetch_module, monkey
 
 
 def test_non_500_http_error_skips_without_retry(garmin_fetch_module, monkeypatch):
-    scripted, login_calls, sleeps = _set_up(
-        garmin_fetch_module, monkeypatch, [_http_error(404)]
-    )
+    scripted, login_calls, sleeps = _set_up(garmin_fetch_module, monkeypatch, [_http_error(404)])
 
     garmin_fetch_module.fetch_write_bulk(DATE_STR, DATE_STR)
 
@@ -187,9 +179,7 @@ def test_connection_error_skips_without_retry(garmin_fetch_module, monkeypatch):
     assert scripted.calls == [DATE_STR]
 
 
-def test_garmin_connect_connection_error_matches_the_first_except_clause(
-    garmin_fetch_module, monkeypatch
-):
+def test_garmin_connect_connection_error_matches_the_first_except_clause(garmin_fetch_module, monkeypatch):
     """
     GarminConnectConnectionError is listed in the *second* except tuple
     too, but can never reach it -- the first except tuple
@@ -210,9 +200,7 @@ def test_garmin_connect_connection_error_matches_the_first_except_clause(
     assert scripted.calls == [DATE_STR]
 
 
-def test_authentication_error_triggers_relogin_then_retries(
-    garmin_fetch_module, monkeypatch
-):
+def test_authentication_error_triggers_relogin_then_retries(garmin_fetch_module, monkeypatch):
     scripted, login_calls, sleeps = _set_up(
         garmin_fetch_module,
         monkeypatch,
@@ -226,25 +214,17 @@ def test_authentication_error_triggers_relogin_then_retries(
     assert 5 in sleeps
 
 
-def test_generic_exception_propagates_when_ignore_errors_is_false(
-    garmin_fetch_module, monkeypatch
-):
+def test_generic_exception_propagates_when_ignore_errors_is_false(garmin_fetch_module, monkeypatch):
     monkeypatch.setattr(garmin_fetch_module, "IGNORE_ERRORS", False)
-    scripted, login_calls, sleeps = _set_up(
-        garmin_fetch_module, monkeypatch, [ValueError("unexpected")]
-    )
+    scripted, login_calls, sleeps = _set_up(garmin_fetch_module, monkeypatch, [ValueError("unexpected")])
 
     with pytest.raises(ValueError, match="unexpected"):
         garmin_fetch_module.fetch_write_bulk(DATE_STR, DATE_STR)
 
 
-def test_generic_exception_is_swallowed_when_ignore_errors_is_true(
-    garmin_fetch_module, monkeypatch
-):
+def test_generic_exception_is_swallowed_when_ignore_errors_is_true(garmin_fetch_module, monkeypatch):
     monkeypatch.setattr(garmin_fetch_module, "IGNORE_ERRORS", True)
-    scripted, login_calls, sleeps = _set_up(
-        garmin_fetch_module, monkeypatch, [ValueError("unexpected")]
-    )
+    scripted, login_calls, sleeps = _set_up(garmin_fetch_module, monkeypatch, [ValueError("unexpected")])
 
     garmin_fetch_module.fetch_write_bulk(DATE_STR, DATE_STR)  # does not raise
 
