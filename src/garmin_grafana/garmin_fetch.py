@@ -1101,6 +1101,14 @@ def get_lactate_threshold(date_str):
         endpoints[f"HeartRateThreshold_{ltsport}"] = (
             f"/biometric-service/stats/lactateThresholdHeartRate/range/{date_str}/{date_str}", params,
         )
+        # Functional Threshold Power (FTP) -- same endpoint family, see #22.
+        # Confirmed live this also works for sport=cycling (same shape), but
+        # LACTATE_THRESHOLD_SPORTS defaults to RUNNING only and cycling
+        # doesn't have a meaningful lactateThresholdSpeed/HeartRate -- cycling
+        # FTP needs its own sport list, tracked separately, not bundled here.
+        endpoints[f"PowerThreshold_{ltsport}"] = (
+            f"/biometric-service/stats/functionalThresholdPower/range/{date_str}/{date_str}", params,
+        )
 
     for label, (path, params) in endpoints.items():
         lt_list_all = garmin_obj.connectapi(path, params=params)

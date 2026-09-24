@@ -54,9 +54,12 @@ def test_training_readiness_exact_point_shape(garmin_fetch_module):
 def test_lactate_threshold_exact_point_shape(garmin_fetch_module):
     """
     Default LACTATE_THRESHOLD_SPORTS config is a single sport ("RUNNING"),
-    so get_lactate_threshold builds two endpoints (speed + heart rate
-    threshold) and FakeGarmin.connectapi returns the same canned value for
-    both -- two single-field points, in endpoint-iteration order.
+    so get_lactate_threshold builds three endpoints (speed, heart rate, and
+    power/FTP threshold -- see #22) and FakeGarmin.connectapi returns the
+    same canned value for all three -- three single-field points, in
+    endpoint-iteration order. Written to expect the post-#22 three-endpoint
+    shape already (confirmed failing against the pre-#22 two-endpoint
+    implementation before that change landed).
     """
     points = garmin_fetch_module.get_lactate_threshold(DATE_STR)
     assert points == [
@@ -71,6 +74,12 @@ def test_lactate_threshold_exact_point_shape(garmin_fetch_module):
             "time": LACTATE_THRESHOLD_EXPECTED_TIME,
             "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
             "fields": {"HeartRateThreshold_RUNNING": 165},
+        },
+        {
+            "measurement": "LactateThreshold",
+            "time": LACTATE_THRESHOLD_EXPECTED_TIME,
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"PowerThreshold_RUNNING": 165},
         },
     ]
 
