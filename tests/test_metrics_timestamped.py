@@ -53,13 +53,17 @@ def test_training_readiness_exact_point_shape(garmin_fetch_module):
 
 def test_lactate_threshold_exact_point_shape(garmin_fetch_module):
     """
-    Default LACTATE_THRESHOLD_SPORTS config is a single sport ("RUNNING"),
-    so get_lactate_threshold builds three endpoints (speed, heart rate, and
-    power/FTP threshold -- see #22) and FakeGarmin.connectapi returns the
-    same canned value for all three -- three single-field points, in
-    endpoint-iteration order. Written to expect the post-#22 three-endpoint
-    shape already (confirmed failing against the pre-#22 two-endpoint
-    implementation before that change landed).
+    Default LACTATE_THRESHOLD_SPORTS is a single sport ("RUNNING"), used for
+    speed/heart-rate threshold; default FTP_SPORTS is ("RUNNING", "CYCLING")
+    -- a deliberately separate, broader sport list, since FTP applies to
+    cycling too but lactateThresholdSpeed/HeartRate don't (see #22). So
+    get_lactate_threshold builds four endpoints (speed + HR for running,
+    power/FTP for running + cycling) and FakeGarmin.connectapi returns the
+    same canned value for all four -- four single-field points, in
+    endpoint-iteration order (LACTATE_THRESHOLD_SPORTS's endpoints first,
+    then FTP_SPORTS's). Written to expect the post-cycling-FTP four-endpoint
+    shape already (confirmed failing against the running-only
+    three-endpoint implementation before that change landed).
     """
     points = garmin_fetch_module.get_lactate_threshold(DATE_STR)
     assert points == [
@@ -80,6 +84,12 @@ def test_lactate_threshold_exact_point_shape(garmin_fetch_module):
             "time": LACTATE_THRESHOLD_EXPECTED_TIME,
             "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
             "fields": {"PowerThreshold_RUNNING": 165},
+        },
+        {
+            "measurement": "LactateThreshold",
+            "time": LACTATE_THRESHOLD_EXPECTED_TIME,
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {"PowerThreshold_CYCLING": 165},
         },
     ]
 
@@ -109,7 +119,8 @@ def test_lactate_threshold_passes_query_params_separately_not_embedded_in_path(
     assert calls, "expected at least one connectapi call"
     for endpoint, params in calls:
         assert "?" not in endpoint, f"query string embedded in path: {endpoint!r}"
-        assert params == {"aggregation": "daily", "sport": "RUNNING"}
+        assert params["aggregation"] == "daily"
+        assert params["sport"] in ("RUNNING", "CYCLING")
 
 
 def test_training_status_exact_point_shape(garmin_fetch_module):

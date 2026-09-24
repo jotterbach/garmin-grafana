@@ -69,6 +69,7 @@ UPDATE_INTERVAL_SECONDS = CONFIG.update_interval_seconds
 FETCH_SELECTION = CONFIG.fetch_selection
 ACTIVITY_TYPE_FILTER = CONFIG.activity_type_filter
 LACTATE_THRESHOLD_SPORTS = CONFIG.lactate_threshold_sports
+FTP_SPORTS = CONFIG.ftp_sports
 KEEP_FIT_FILES = CONFIG.keep_fit_files
 FIT_FILE_STORAGE_LOCATION = CONFIG.fit_file_storage_location
 ALWAYS_PROCESS_FIT_FILES = CONFIG.always_process_fit_files
@@ -1101,13 +1102,17 @@ def get_lactate_threshold(date_str):
         endpoints[f"HeartRateThreshold_{ltsport}"] = (
             f"/biometric-service/stats/lactateThresholdHeartRate/range/{date_str}/{date_str}", params,
         )
-        # Functional Threshold Power (FTP) -- same endpoint family, see #22.
-        # Confirmed live this also works for sport=cycling (same shape), but
-        # LACTATE_THRESHOLD_SPORTS defaults to RUNNING only and cycling
-        # doesn't have a meaningful lactateThresholdSpeed/HeartRate -- cycling
-        # FTP needs its own sport list, tracked separately, not bundled here.
-        endpoints[f"PowerThreshold_{ltsport}"] = (
-            f"/biometric-service/stats/functionalThresholdPower/range/{date_str}/{date_str}", params,
+
+    # Functional Threshold Power (FTP) -- same endpoint family, see #22.
+    # Deliberately its own sport list (FTP_SPORTS), not LACTATE_THRESHOLD_SPORTS:
+    # confirmed live FTP applies to both running and cycling, but
+    # lactateThresholdSpeed/HeartRate aren't meaningful for cycling, so sharing
+    # one list would mean either missing cycling FTP or wasting two empty
+    # calls/day per non-running sport.
+    for ftpsport in FTP_SPORTS:
+        endpoints[f"PowerThreshold_{ftpsport}"] = (
+            f"/biometric-service/stats/functionalThresholdPower/range/{date_str}/{date_str}",
+            {"aggregation": "daily", "sport": ftpsport},
         )
 
     for label, (path, params) in endpoints.items():

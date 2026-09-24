@@ -63,6 +63,7 @@ class Config:
     fetch_selection: str
     activity_type_filter: list = field(default_factory=list)
     lactate_threshold_sports: list = field(default_factory=list)
+    ftp_sports: list = field(default_factory=list)
     keep_fit_files: bool = False
     fit_file_storage_location: str = ""
     always_process_fit_files: bool = False
@@ -132,6 +133,15 @@ class Config:
                 if t.strip()
             ],
             lactate_threshold_sports=env.get("LACTATE_THRESHOLD_SPORTS", "RUNNING")
+            .upper()
+            .split(","),
+            # Separate from lactate_threshold_sports: FTP applies broadly
+            # (confirmed live for both running and cycling), unlike
+            # lactateThresholdSpeed/HeartRate, which aren't meaningful for
+            # cycling -- see #22. A shared sport list would mean either
+            # missing cycling FTP or wasting two empty calls/day fetching
+            # cycling lactate threshold speed/HR that Garmin doesn't track.
+            ftp_sports=env.get("FTP_SPORTS", "RUNNING,CYCLING")
             .upper()
             .split(","),
             keep_fit_files=_env_bool(env.get("KEEP_FIT_FILES"), default=False),
