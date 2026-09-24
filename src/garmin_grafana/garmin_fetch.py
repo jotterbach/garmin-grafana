@@ -444,7 +444,8 @@ def get_intraday_br(date_str):
 # %%
 def get_intraday_hrv(date_str):
     points_list = []
-    hrv_list = (garmin_obj.get_hrv_data(date_str) or {}).get('hrvReadings') or []
+    hrv_data = garmin_obj.get_hrv_data(date_str) or {}
+    hrv_list = hrv_data.get('hrvReadings') or []
     for entry in hrv_list:
         if entry.get('hrvValue'):
             timestamp = pytz.timezone("UTC").localize(datetime.strptime(entry['readingTimeGMT'], "%Y-%m-%dT%H:%M:%S.%f"))
@@ -454,6 +455,27 @@ def get_intraday_hrv(date_str):
             ))
     if points_list:
         logging.info(f"Success : Fetching intraday HRV for date {date_str}")
+
+    hrv_summary = hrv_data.get('hrvSummary') or {}
+    baseline = hrv_summary.get('baseline') or {}
+    status_fields = {
+        "weeklyAvg": hrv_summary.get('weeklyAvg'),
+        "lastNightAvg": hrv_summary.get('lastNightAvg'),
+        "lastNight5MinHigh": hrv_summary.get('lastNight5MinHigh'),
+        "baselineLowUpper": baseline.get('lowUpper'),
+        "baselineBalancedLow": baseline.get('balancedLow'),
+        "baselineBalancedUpper": baseline.get('balancedUpper'),
+        "status": hrv_summary.get('status'),
+        "feedbackPhrase": hrv_summary.get('feedbackPhrase'),
+    }
+    status_points = build_daily_summary_point(
+        "HRV_Status", date_str, status_fields,
+        device_name=GARMIN_DEVICENAME, database_name=INFLUXDB_DATABASE,
+    )
+    if status_points:
+        logging.info(f"Success : Fetching HRV Status for date {date_str}")
+    points_list.extend(status_points)
+
     return points_list
 
 # %%

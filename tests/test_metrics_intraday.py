@@ -58,6 +58,12 @@ def test_intraday_br_exact_point_shape(garmin_fetch_module):
 
 
 def test_intraday_hrv_exact_point_shape(garmin_fetch_module):
+    """
+    #48: get_hrv_data's response also carries an hrvSummary block (weekly
+    avg, last night's avg, Garmin's own qualitative status, and the
+    balanced-range baseline) that was previously fetched but discarded --
+    zero extra API calls, just extract more of what's already there.
+    """
     points = garmin_fetch_module.get_intraday_hrv(DATE_STR)
     assert points == [
         {
@@ -65,6 +71,21 @@ def test_intraday_hrv_exact_point_shape(garmin_fetch_module):
             "time": "2026-01-15T06:00:00+00:00",
             "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
             "fields": {"hrvValue": 45},
+        },
+        {
+            "measurement": "HRV_Status",
+            "time": "2026-01-15T00:00:00+00:00",
+            "tags": {"Device": "TestDevice", "Database_Name": "SmokeTestDB"},
+            "fields": {
+                "weeklyAvg": 52,
+                "lastNightAvg": 48,
+                "lastNight5MinHigh": 61,
+                "baselineLowUpper": 40,
+                "baselineBalancedLow": 45,
+                "baselineBalancedUpper": 60,
+                "status": "BALANCED",
+                "feedbackPhrase": "HRV_BALANCED_7",
+            },
         },
     ]
 

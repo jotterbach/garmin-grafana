@@ -24,40 +24,113 @@
     "avgSkinTempDeviationF": -0.36
   },
   "steps": [
-    {"startGMT": "2026-01-15T06:00:00.0", "endGMT": "2026-01-15T06:15:00.0", "steps": 320, "primaryActivityLevel": "active"},
-    {"startGMT": "2026-01-15T06:15:00.0", "endGMT": "2026-01-15T06:30:00.0", "steps": 0, "primaryActivityLevel": "sedentary"}
+    {
+      "startGMT": "2026-01-15T06:00:00.0",
+      "endGMT": "2026-01-15T06:15:00.0",
+      "steps": 320,
+      "primaryActivityLevel": "active"
+    },
+    {
+      "startGMT": "2026-01-15T06:15:00.0",
+      "endGMT": "2026-01-15T06:30:00.0",
+      "steps": 0,
+      "primaryActivityLevel": "sedentary"
+    }
   ],
   "heart_rates": {
     "heartRateValues": [
-      [1768460400000, 58],
-      [1768460700000, 61],
-      [1768461000000, 0]
+      [
+        1768460400000,
+        58
+      ],
+      [
+        1768460700000,
+        61
+      ],
+      [
+        1768461000000,
+        0
+      ]
     ]
   },
   "stress": {
     "stressValuesArray": [
-      [1768460400000, 22],
-      [1768460700000, 28],
-      [1768461000000, 0]
+      [
+        1768460400000,
+        22
+      ],
+      [
+        1768460700000,
+        28
+      ],
+      [
+        1768461000000,
+        0
+      ]
     ],
     "bodyBatteryValuesArray": [
-      [1768460400000, "MEASURED", 74, 3.0],
-      [1768460700000, "MEASURED", 72, 3.0],
-      [1768461000000, "MEASURED", 0, 3.0]
+      [
+        1768460400000,
+        "MEASURED",
+        74,
+        3.0
+      ],
+      [
+        1768460700000,
+        "MEASURED",
+        72,
+        3.0
+      ],
+      [
+        1768461000000,
+        "MEASURED",
+        0,
+        3.0
+      ]
     ]
   },
   "respiration": {
     "respirationValuesArray": [
-      [1768460400000, 14.0],
-      [1768460700000, 14.5],
-      [1768461000000, 0.0]
+      [
+        1768460400000,
+        14.0
+      ],
+      [
+        1768460700000,
+        14.5
+      ],
+      [
+        1768461000000,
+        0.0
+      ]
     ]
   },
   "hrv": {
     "hrvReadings": [
-      {"readingTimeGMT": "2026-01-15T06:00:00.0", "hrvValue": 45},
-      {"readingTimeGMT": "2026-01-15T06:05:00.0", "hrvValue": 0}
-    ]
+      {
+        "readingTimeGMT": "2026-01-15T06:00:00.0",
+        "hrvValue": 45
+      },
+      {
+        "readingTimeGMT": "2026-01-15T06:05:00.0",
+        "hrvValue": 0
+      }
+    ],
+    "hrvSummary": {
+      "calendarDate": "2026-01-15",
+      "weeklyAvg": 52,
+      "lastNightAvg": 48,
+      "lastNight5MinHigh": 61,
+      "baseline": {
+        "lowUpper": 40,
+        "balancedLow": 45,
+        "balancedUpper": 60,
+        "markerValue": 0.5
+      },
+      "status": "BALANCED",
+      "feedbackPhrase": "HRV_BALANCED_7",
+      "createTimeStamp": "2026-01-16T06:10:00.0"
+    }
   },
   "fitness_age": {
     "chronologicalAge": 32,
@@ -66,12 +139,21 @@
   },
   "max_metrics": [
     {
-      "generic": {"vo2MaxPreciseValue": 47.2},
-      "cycling": {"vo2MaxPreciseValue": null}
+      "generic": {
+        "vo2MaxPreciseValue": 47.2
+      },
+      "cycling": {
+        "vo2MaxPreciseValue": null
+      }
     }
   ],
   "race_predictions": [
-    {"time5K": 1320, "time10K": 2760, "timeHalfMarathon": 6120, "timeMarathon": 12900}
+    {
+      "time5K": 1320,
+      "time10K": 2760,
+      "timeHalfMarathon": 6120,
+      "timeMarathon": 12900
+    }
   ],
   "lifestyle": {
     "dailyLogsReport": [
@@ -85,16 +167,35 @@
         "name": "Caffeine",
         "category": "SUBSTANCE",
         "logStatus": "YES",
-        "details": [{"amount": 95.0}]
+        "details": [
+          {
+            "amount": 95.0
+          }
+        ]
       }
     ]
   },
   "hr_zones": [
-    {"zoneNumber": 1, "zoneLowBoundary": 95},
-    {"zoneNumber": 2, "zoneLowBoundary": 130},
-    {"zoneNumber": 3, "zoneLowBoundary": 150},
-    {"zoneNumber": 4, "zoneLowBoundary": 165},
-    {"zoneNumber": 5, "zoneLowBoundary": 178}
+    {
+      "zoneNumber": 1,
+      "zoneLowBoundary": 95
+    },
+    {
+      "zoneNumber": 2,
+      "zoneLowBoundary": 130
+    },
+    {
+      "zoneNumber": 3,
+      "zoneLowBoundary": 150
+    },
+    {
+      "zoneNumber": 4,
+      "zoneLowBoundary": 165
+    },
+    {
+      "zoneNumber": 5,
+      "zoneLowBoundary": 178
+    }
   ],
   "hill_score": {
     "strengthScore": 46,
