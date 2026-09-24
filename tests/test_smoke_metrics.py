@@ -54,8 +54,9 @@ def test_intraday_breathing_rate(garmin_fetch_module):
 
 def test_intraday_hrv(garmin_fetch_module):
     points = garmin_fetch_module.get_intraday_hrv(DATE_STR)
-    assert len(points) == 1
+    assert len(points) == 2
     assert points[0]["measurement"] == "HRV_Intraday"
+    assert points[1]["measurement"] == "HRV_Status"
 
 
 def test_fitness_age(garmin_fetch_module):
